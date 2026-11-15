@@ -1,0 +1,125 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="_lib/base.css">
+<script type="application/json" data-doc>
+{"desc": "Sân khấu người que: nhân vật trong cast diễn theo 'acting' của cảnh (đi, chỉ, cầm đồ, cảm xúc, thoại).",
+ "props": {"title": "chữ lớn phía trên (≤6 từ, tuỳ chọn)", "title_at": "lúc hiện title", "backdrop": "plain|room|office|street|nature|night|stage|space",
+           "items": "[{emoji|text, x:0-1, y:0-1, size:0-1, at}] đồ vật/biểu tượng hiện ra trên sân khấu"},
+ "needs": "acting trong scene; who = tên trong cast"}
+</script>
+<script type="application/json" data-demo>
+{"duration": 6, "props": {"title": "TIẾT KIỆM 90% TOKEN", "backdrop": "office",
+  "items": [{"emoji": "💰", "x": 0.82, "y": 0.42, "size": 0.12, "at": 2.5}]},
+ "cast": {"Bo": {"head": "filled", "head_fill": "#fff", "shirt": "#ffd23f", "hat": "beanie", "hat_color": "#e63946", "face": true},
+          "Mi": {"head": "hollow", "face": true, "scale": 0.85}},
+ "acting": [{"who": "Bo", "t": 0, "act": "walk", "move": "enter_left", "mood": "happy"},
+            {"who": "Bo", "t": 1.6, "act": "talk", "mood": "happy", "say": "Xem này!"},
+            {"who": "Mi", "t": 0.5, "act": "think", "mood": "curious"},
+            {"who": "Bo", "t": 3, "act": "present", "hold": "bulb", "mood": "proud"},
+            {"who": "Mi", "t": 3.4, "act": "cheer", "mood": "happy"}]}
+</script>
+<script src="_lib/runtime.js"></script>
+<script src="_lib/stickman.js"></script>
+</head><body>
+<script>
+let svg, sticks = {}, tracks, items = [], titleEl, ground, S, input;
+
+function backdrop(g, kind, W, H, gy, st) {
+  const { el } = VF, ink = 'var(--ink)';
+  if (st.sky) {
+    const d = el('defs', {}, g), lg = el('linearGradient', { id: 'sky', x1: 0, y1: 0, x2: 0, y2: 1 }, d);
+    el('stop', { offset: 0, 'stop-color': st.sky[0] }, lg); el('stop', { offset: 1, 'stop-color': st.sky[1] }, lg);
+    el('rect', { width: W, height: gy, fill: 'url(#sky)' }, g);
+  }
+  if (kind === 'night' || kind === 'space') {
+    el('rect', { width: W, height: H, fill: kind === 'space' ? '#070b1f' : '#101a33' }, g);
+    for (let i = 0; i < 70; i++) el('circle', { cx: (i * 397) % W, cy: (i * 211) % (gy * 0.9), r: 1.5 + (i % 3), fill: '#fff', opacity: 0.4 + (i % 5) / 10 }, g);
+    el('circle', { cx: W * 0.8, cy: H * 0.14, r: W * 0.06, fill: '#fdf6d8' }, g);
+  }
+  if (kind === 'room' || kind === 'office') {
+    el('rect', { x: W * 0.08, y: gy - H * 0.36, width: W * 0.26, height: H * 0.16, rx: 6, fill: 'none', stroke: ink, 'stroke-width': 5, opacity: .5 }, g);
+    el('line', { x1: W * 0.21, y1: gy - H * 0.36, x2: W * 0.21, y2: gy - H * 0.2, stroke: ink, 'stroke-width': 4, opacity: .4 }, g);
+    if (kind === 'office') {
+      el('rect', { x: W * 0.62, y: gy - H * 0.11, width: W * 0.3, height: H * 0.012, fill: ink, opacity: .7 }, g);
+      el('line', { x1: W * 0.65, y1: gy - H * 0.1, x2: W * 0.65, y2: gy, stroke: ink, 'stroke-width': 5, opacity: .6 }, g);
+      el('line', { x1: W * 0.89, y1: gy - H * 0.1, x2: W * 0.89, y2: gy, stroke: ink, 'stroke-width': 5, opacity: .6 }, g);
+      el('rect', { x: W * 0.7, y: gy - H * 0.17, width: W * 0.13, height: H * 0.06, rx: 4, fill: 'var(--a2)', opacity: .8 }, g);
+    } else {
+      el('rect', { x: W * 0.66, y: gy - H * 0.28, width: W * 0.2, height: H * 0.28, rx: 8, fill: 'none', stroke: ink, 'stroke-width': 5, opacity: .4 }, g);
+    }
+  }
+  if (kind === 'street') {
+    [[0.05, 0.3], [0.2, 0.42], [0.62, 0.36], [0.8, 0.5]].forEach(([x, h]) => {
+      el('rect', { x: W * x, y: gy - H * h * 0.6, width: W * 0.15, height: H * h * 0.6, fill: 'var(--ink)', opacity: .1 }, g);
+    });
+    el('line', { x1: W * 0.9, y1: gy, x2: W * 0.9, y2: gy - H * 0.3, stroke: ink, 'stroke-width': 6, opacity: .5 }, g);
+    el('circle', { cx: W * 0.9, cy: gy - H * 0.3, r: W * 0.025, fill: 'var(--a3)', opacity: .9 }, g);
+  }
+  if (kind === 'nature') {
+    el('circle', { cx: W * 0.82, cy: H * 0.16, r: W * 0.07, fill: 'var(--a3)', opacity: .8 }, g);
+    el('path', { d: `M0 ${gy} Q${W * 0.25} ${gy - H * 0.16} ${W * 0.5} ${gy} T${W} ${gy} Z`, fill: 'var(--a2)', opacity: .25 }, g);
+    [[0.12, 1], [0.88, 0.8]].forEach(([x, s]) => {
+      el('line', { x1: W * x, y1: gy, x2: W * x, y2: gy - H * 0.12 * s, stroke: '#6d4c41', 'stroke-width': 10 * s }, g);
+      el('circle', { cx: W * x, cy: gy - H * 0.16 * s, r: W * 0.08 * s, fill: '#66bb6a', opacity: .9 }, g);
+    });
+  }
+  if (kind === 'stage') {
+    el('ellipse', { cx: W / 2, cy: gy, rx: W * 0.42, ry: H * 0.03, fill: 'var(--a3)', opacity: .25 }, g);
+    el('path', { d: `M${W * 0.5} 0 L${W * 0.18} ${gy} L${W * 0.82} ${gy} Z`, fill: '#fff', opacity: .08 }, g);
+  }
+  el('line', { x1: 0, y1: gy, x2: W, y2: gy, stroke: st.ground || ink, 'stroke-width': Math.max(4, W * 0.005), 'stroke-linecap': 'round' }, g);
+}
+
+VF.scene({
+  setup(inp, root) {
+    input = inp;
+    const { el } = VF, W = inp.width, H = inp.height, portrait = H > W, p = inp.props || {};
+    ground = portrait ? H * 0.69 : H * 0.8;
+    S = (portrait ? W * 0.5 : H * 0.46) * (inp.props?.zoom || 1);
+    svg = el('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, class: 'layer' }, root);
+    backdrop(el('g', {}, svg), p.backdrop || 'plain', W, H, ground, inp.style || {});
+    const itemsG = el('g', {}, svg), figG = el('g', {}, svg);
+    const css = getComputedStyle(document.documentElement);
+    const colors = { ink: css.getPropertyValue('--ink').trim(), a1: css.getPropertyValue('--a1').trim(), a2: css.getPropertyValue('--a2').trim(), a3: css.getPropertyValue('--a3').trim() };
+    const cast = Object.keys(inp.cast || {}).length ? inp.cast : { hero: {} };
+    const names = Object.keys(cast).filter(n => !inp.acting.length || inp.acting.some(b => b.who === n));
+    if (!names.length) names.push(Object.keys(cast)[0]);
+    sticks = {};
+    names.forEach(n => { sticks[n] = new VF.Stick(figG, cast[n], S, colors); });
+    VF.lib = { actions: inp.actions || window.__actions || { stand: { frames: [{ pose: {} }] } } };
+    tracks = VF.stick.timeline(inp.acting || [], names, W, VF.lib);
+    items = (p.items || []).map(it => {
+      const g = el('g', { opacity: 0 }, itemsG);
+      const fs = (it.size || 0.1) * W;
+      el('text', { 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-size': fs, 'font-weight': 800, 'font-family': 'var(--title-font)', fill: 'var(--ink)', text: it.emoji || it.text || '' }, g);
+      return { g, x: (it.x ?? 0.5) * W, y: (it.y ?? 0.4) * H, t: VF.at(it.at, 0.3) };
+    });
+    if (p.title) {
+      titleEl = el('div', { class: 'layer center title fs-l' }, root);
+      Object.assign(titleEl.style, { bottom: 'auto', height: (portrait ? H * 0.26 : H * 0.24) + 'px', padding: '0 6%', paddingTop: portrait ? H * 0.06 + 'px' : 0 });
+      titleEl.innerHTML = p.title.replace(/\*(.+?)\*/g, '<span class="hl">$1</span>');
+      titleEl._t = VF.at(p.title_at, 0);
+    } else titleEl = null;
+  },
+  draw(t, inp) {
+    const W = inp.width;
+    for (const [n, st] of Object.entries(sticks)) {
+      const s = VF.stick.stateAt(tracks[n], t, VF.lib, W);
+      st.pose(s.p, s.x, ground, s.face, s.mood, s.hold, t, s.label, s.seated);
+      const since = t - (s.sayT ?? 0);
+      st.say(s.say || '', s.say ? VF.clamp(since / 0.15) * VF.clamp((2.6 - since) / 0.3) : 0);
+    }
+    for (const it of items) {
+      const k = VF.prog(t, it.t, 0.45, 'back');
+      it.g.setAttribute('opacity', VF.clamp((t - it.t) / 0.2));
+      it.g.setAttribute('transform', `translate(${it.x} ${it.y + Math.sin(t * 2.2) * 6}) scale(${0.3 + 0.7 * k})`);
+    }
+    if (titleEl) {
+      const k = VF.prog(t, titleEl._t, 0.5, 'back');
+      titleEl.style.opacity = VF.clamp((t - titleEl._t) / 0.25);
+      titleEl.style.transform = `translateY(${(1 - k) * -40}px) scale(${0.9 + 0.1 * k})`;
+    }
+  },
+});
+</script>
+</body></html>

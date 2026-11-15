@@ -1,0 +1,9 @@
+workspace/
+node_modules/
+.venv/
+**/__pycache__/
+**/*.mp4
+**/*.wav
+**/*.jpg
+**/*.png
+templates/comfy_workflows/*.json

@@ -1,0 +1,37 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_lib/base.css">
+<script type="application/json" data-doc>
+{"desc": "Trích dẫn: chữ hiện theo nhịp đọc, dấu ngoặc lớn, tên tác giả.",
+ "props": {"quote": "câu trích (≤25 từ)", "author": "tác giả / nguồn"}}
+</script>
+<script type="application/json" data-demo>
+{"duration": 5, "props": {"quote": "Đơn giản là đỉnh cao của sự tinh tế.", "author": "Leonardo da Vinci"}}
+</script>
+<script src="_lib/runtime.js"></script>
+<style>
+  .q { font-family: var(--title-font); font-weight: 800; line-height: 1.25; padding: 0 10%; }
+  .mark { font-size: 2.4em; color: var(--a1); line-height: .5; display: block; font-family: Georgia, serif; }
+  .au { margin-top: 5%; opacity: .7; font-weight: 700; }
+  .q span { transition: none; }
+</style>
+</head><body>
+<script>
+let spans = [], au, mk, n;
+VF.scene({
+  setup(inp, root) {
+    const { el } = VF, p = inp.props;
+    const c = el('div', { class: 'layer center' }, root);
+    mk = el('span', { class: 'mark fs-xl', text: '“' }, c);
+    const q = el('div', { class: 'q fs-l' }, c);
+    spans = (p.quote || '').split(/\s+/).map(w => { const s = el('span', { text: w + ' ' }, q); return s; });
+    au = el('div', { class: 'au fs-s', text: p.author ? '— ' + p.author : '' }, c);
+  },
+  draw(t, inp) {
+    const d = inp.duration, per = Math.max(0.08, (d * 0.7) / Math.max(spans.length, 1));
+    mk.style.opacity = VF.prog(t, 0, 0.4); mk.style.transform = `scale(${0.5 + 0.5 * VF.prog(t, 0, 0.5, 'back')})`;
+    spans.forEach((s, i) => { s.style.opacity = 0.12 + 0.88 * VF.prog(t, 0.3 + i * per, 0.25); });
+    au.style.opacity = VF.prog(t, 0.3 + spans.length * per, 0.4);
+  },
+});
+</script>
+</body></html>

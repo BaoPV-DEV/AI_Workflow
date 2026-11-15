@@ -1,0 +1,47 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_lib/base.css">
+<script type="application/json" data-doc>
+{"desc": "Tiêu đề + 2-5 ý hiện lần lượt, ý đang nói được làm nổi.",
+ "props": {"title": "tiêu đề", "items": "[chuỗi] 2-5 ý, mỗi ý ≤7 từ", "at": "[mốc] hiện từng ý (từ trong lời đọc / %), bỏ trống = chia đều", "icon": "ký tự đầu dòng, mặc định số thứ tự"}}
+</script>
+<script type="application/json" data-demo>
+{"duration": 6, "props": {"title": "3 nguyên tắc", "items": ["Tách bộ não và cơ bắp", "Một file manifest duy nhất", "Template dựng sẵn, chỉ truyền props"]}}
+</script>
+<script src="_lib/runtime.js"></script>
+<style>
+  .box { position: absolute; left: 8%; right: 8%; top: 14%; }
+  .ttl { margin-bottom: 6%; }
+  .it { display: flex; align-items: center; gap: .6em; margin: 0 0 4.5%; font-weight: 700; padding: .35em .5em; border-radius: .4em; }
+  .dot { flex: none; width: 1.6em; height: 1.6em; border-radius: 50%; background: var(--a1); color: #fff; display: grid; place-items: center; font-weight: 900; font-size: .8em; }
+  .it.on { background: color-mix(in srgb, var(--a3) 35%, transparent); }
+</style>
+</head><body>
+<script>
+let rows = [], times = [], ttl;
+VF.scene({
+  setup(inp, root) {
+    const p = inp.props, { el } = VF, d = inp.duration;
+    const box = el('div', { class: 'box' }, root);
+    ttl = el('div', { class: 'ttl title fs-l', text: p.title || '' }, box);
+    const items = p.items || [];
+    rows = items.map((txt, i) => {
+      const r = el('div', { class: 'it fs-m' }, box);
+      el('div', { class: 'dot', text: p.icon || String(i + 1) }, r);
+      el('div', { text: txt }, r);
+      return r;
+    });
+    times = items.map((_, i) => VF.at((p.at || [])[i], 0.5 + i * (d - 1) / Math.max(items.length, 1)));
+  },
+  draw(t) {
+    ttl.style.opacity = VF.prog(t, 0, 0.4);
+    rows.forEach((r, i) => {
+      const k = VF.prog(t, times[i], 0.45, 'back');
+      r.style.opacity = VF.clamp((t - times[i]) / 0.2);
+      r.style.transform = `translateX(${(1 - k) * -80}px)`;
+      const next = times[i + 1] ?? 1e9;
+      r.classList.toggle('on', t >= times[i] && t < next);
+    });
+  },
+});
+</script>
+</body></html>

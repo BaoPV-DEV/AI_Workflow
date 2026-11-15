@@ -1,0 +1,41 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_lib/base.css">
+<script type="application/json" data-doc>
+{"desc": "Một con số lớn đếm lên, kèm nhãn. Dùng mỗi khi lời đọc nêu số liệu.",
+ "props": {"value": "số (vd 90)", "prefix": "trước số, vd '$'", "suffix": "sau số, vd '%'", "label": "nhãn ngắn", "sub": "nguồn/ghi chú nhỏ", "at": "lúc bắt đầu đếm (từ trong lời đọc hoặc %)", "decimals": "số chữ số thập phân"}}
+</script>
+<script type="application/json" data-demo>
+{"duration": 4, "props": {"value": 90, "suffix": "%", "label": "chi phí token giảm", "sub": "nhờ prompt caching", "at": "20%"}}
+</script>
+<script src="_lib/runtime.js"></script>
+<style>
+  .num { font-family: var(--title-font); font-weight: 900; color: var(--a1); line-height: 1; font-variant-numeric: tabular-nums; }
+  .lab { font-weight: 800; margin-top: 3%; }
+  .sub { opacity: .6; margin-top: 2%; }
+  .ring { position: absolute; border-radius: 50%; border: 12px solid var(--a2); opacity: .25; }
+</style>
+</head><body>
+<script>
+let n, l, s, ring, t0, val, dec;
+VF.scene({
+  setup(inp, root) {
+    const p = inp.props, { el } = VF, W = inp.width, H = inp.height, D = Math.min(W, H) * 0.7;
+    ring = el('div', { class: 'ring' }, root);
+    Object.assign(ring.style, { width: D + 'px', height: D + 'px', left: (W - D) / 2 + 'px', top: (H - D) / 2 + 'px' });
+    const c = el('div', { class: 'layer center' }, root);
+    n = el('div', { class: 'num', style: { fontSize: Math.min(W, H) * 0.26 + 'px' } }, c);
+    l = el('div', { class: 'lab title fs-m', text: p.label || '' }, c);
+    s = el('div', { class: 'sub fs-s', text: p.sub || '' }, c);
+    t0 = VF.at(p.at, 0.2); val = +p.value || 0; dec = p.decimals ?? (Number.isInteger(val) ? 0 : 1);
+  },
+  draw(t, inp) {
+    const p = inp.props, k = VF.prog(t, t0, 1.2, 'out');
+    n.textContent = (p.prefix || '') + (val * k).toLocaleString('vi-VN', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + (p.suffix || '');
+    n.style.transform = `scale(${0.8 + 0.2 * VF.prog(t, t0, 0.6, 'back')})`;
+    n.style.opacity = VF.clamp((t - t0 + 0.2) / 0.3);
+    l.style.opacity = VF.prog(t, t0 + 0.4, 0.4); s.style.opacity = VF.prog(t, t0 + 0.8, 0.4) * 0.7;
+    ring.style.transform = `scale(${0.6 + 0.4 * k + Math.sin(t * 2) * 0.02})`;
+  },
+});
+</script>
+</body></html>

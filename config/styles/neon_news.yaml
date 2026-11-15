@@ -1,0 +1,11 @@
+label: "Neon News – motion graphics tin nhanh, nền tối, neon cyan/hồng"
+bg: "#05060f"
+ink: "#e8f1ff"
+accent: ["#00f0ff", "#ff2bd6", "#c6ff00"]
+font: "'Segoe UI', Arial, sans-serif"
+title_font: "'Arial Black', Impact, sans-serif"
+texture: glow
+ground: "#00f0ff"
+character: {head: hollow, shirt: none, face: true}
+captions: {font: "Arial Black", size: 0.044, color: "#ffffff", highlight: "#00f0ff", outline: "#000000", y: 0.16, upper: true}
+image_prompt_suffix: "futuristic neon motion graphic, dark background, cyan and magenta glow"

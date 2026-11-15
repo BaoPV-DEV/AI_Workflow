@@ -1,0 +1,55 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_lib/base.css">
+<script type="application/json" data-doc>
+{"desc": "Thẻ tiêu đề mở đầu/chương: chữ lớn bật vào, vạch sáng quét, phát sáng nhẹ.",
+ "props": {"heading": "tiêu đề chính (≤6 từ, *từ* để tô nổi)", "subheading": "dòng phụ (tuỳ chọn)", "kicker": "nhãn nhỏ phía trên, vd 'CHƯƠNG 1' (tuỳ chọn)"}}
+</script>
+<script type="application/json" data-demo>
+{"duration": 3.8, "props": {"kicker": "AI WORKFLOW", "heading": "TỰ ĐỘNG HÓA *VIDEO AI*", "subheading": "Tối ưu cho máy cấu hình thấp"}}
+</script>
+<script src="_lib/runtime.js"></script>
+<style>
+  .wrap { gap: 2.5%; padding: 0 8%; }
+  .kicker { letter-spacing: .3em; font-weight: 800; color: var(--a1); }
+  .sub { opacity: .85; font-weight: 600; }
+  .bar { height: 10px; width: 0; background: linear-gradient(90deg, var(--a1), var(--a2)); border-radius: 6px; }
+  .heading span.w { display: inline-block; }
+  .heading .hl { background: none; color: var(--a1); padding: 0; }
+</style>
+</head><body>
+<script>
+let k, h, s, bar, words = [];
+VF.scene({
+  setup(inp, root) {
+    const p = inp.props, { el } = VF;
+    const wrap = el('div', { class: 'layer center wrap' }, root);
+    k = p.kicker ? el('div', { class: 'kicker fs-s', text: p.kicker }, wrap) : null;
+    h = el('div', { class: 'heading title fs-xl' }, wrap);
+    words = [];
+    (p.heading || '').split(/(\*[^*]+\*|\s+)/).filter(x => x && x.trim()).forEach(tok => {
+      const hl = /^\*.*\*$/.test(tok);
+      (hl ? tok.slice(1, -1).split(/\s+/) : [tok]).forEach(w => {
+        const sp = el('span', { class: 'w' + (hl ? ' hl glow' : ''), text: w }, h);
+        h.appendChild(document.createTextNode(' '));
+        words.push(sp);
+      });
+    });
+    bar = el('div', { class: 'bar' }, wrap);
+    s = p.subheading ? el('div', { class: 'sub fs-m', text: p.subheading }, wrap) : null;
+  },
+  draw(t, inp) {
+    const P = VF.prog;
+    if (k) { k.style.opacity = P(t, 0, 0.4); k.style.transform = `translateY(${(1 - P(t, 0, 0.5)) * 30}px)`; }
+    words.forEach((w, i) => {
+      const q = P(t, 0.15 + i * 0.12, 0.55, 'back');
+      w.style.opacity = VF.clamp((t - 0.15 - i * 0.12) / 0.2);
+      w.style.transform = `translateY(${(1 - q) * 60}px) scale(${0.7 + 0.3 * q})`;
+    });
+    bar.style.width = (P(t, 0.5 + words.length * 0.12, 0.6, 'inOut') * 60) + '%';
+    if (s) { s.style.opacity = P(t, 0.9 + words.length * 0.12, 0.5); }
+    const pulse = 0.85 + 0.15 * Math.sin(t * 3);
+    words.forEach(w => { if (w.classList.contains('hl')) w.style.filter = `brightness(${pulse + 0.15})`; });
+  },
+});
+</script>
+</body></html>

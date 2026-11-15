@@ -1,0 +1,53 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_lib/base.css">
+<script type="application/json" data-doc>
+{"desc": "Biểu đồ cột ngang so sánh 2-6 giá trị, cột mọc lần lượt, cột lớn nhất được tô màu nhấn.",
+ "props": {"title": "tiêu đề", "bars": "[{label, value}] 2-6 cột", "unit": "đơn vị hiển thị sau số", "at": "lúc bắt đầu mọc"}}
+</script>
+<script type="application/json" data-demo>
+{"duration": 5, "props": {"title": "Chi phí 1 video (USD)", "unit": "$", "bars": [{"label": "Thuê studio", "value": 120}, {"label": "API tạo video", "value": 35}, {"label": "Pipeline này", "value": 0.4}]}}
+</script>
+<script src="_lib/runtime.js"></script>
+<style>
+  .box { position: absolute; left: 7%; right: 7%; top: 16%; }
+  .row { margin-bottom: 6%; }
+  .lab { font-weight: 700; margin-bottom: 1.5%; }
+  .track { display: flex; align-items: center; gap: .4em; }
+  .fill { height: 1.4em; border-radius: .3em; background: var(--ink); opacity: .85; }
+  .fill.max { background: var(--a1); opacity: 1; }
+  .val { font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
+</style>
+</head><body>
+<script>
+let rows = [], ttl, t0;
+VF.scene({
+  setup(inp, root) {
+    const p = inp.props, { el } = VF, bars = p.bars || [];
+    const box = el('div', { class: 'box' }, root);
+    ttl = el('div', { class: 'title fs-l', text: p.title || '', style: { marginBottom: '8%' } }, box);
+    const max = Math.max(...bars.map(b => +b.value || 0), 1);
+    rows = bars.map(b => {
+      const r = el('div', { class: 'row' }, box);
+      el('div', { class: 'lab fs-m', text: b.label }, r);
+      const tr = el('div', { class: 'track fs-m' }, r);
+      const f = el('div', { class: 'fill' + (+b.value === max ? ' max' : '') }, tr);
+      if (b.color) f.style.background = b.color;
+      const v = el('div', { class: 'val' }, tr);
+      return { r, f, v, value: +b.value || 0, frac: (+b.value || 0) / max };
+    });
+    t0 = VF.at(p.at, 0.4);
+  },
+  draw(t, inp) {
+    const u = inp.props.unit || '';
+    ttl.style.opacity = VF.prog(t, 0, 0.4);
+    rows.forEach((o, i) => {
+      const k = VF.prog(t, t0 + i * 0.35, 0.9, 'out');
+      o.r.style.opacity = VF.clamp((t - t0 - i * 0.35 + 0.15) / 0.2);
+      o.f.style.width = Math.max(0.5, o.frac * 72 * k) + '%';
+      const val = o.value * k;
+      o.v.textContent = (u === '$' ? '$' : '') + val.toLocaleString('vi-VN', { maximumFractionDigits: o.value < 10 ? 1 : 0 }) + (u && u !== '$' ? ' ' + u : '');
+    });
+  },
+});
+</script>
+</body></html>

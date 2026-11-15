@@ -1,0 +1,8 @@
+workspace/*
+!workspace/.gitkeep
+config/settings.local.yaml
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+.env

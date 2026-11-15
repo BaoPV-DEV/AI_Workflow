@@ -1,0 +1,763 @@
+{
+ "_doc": "Góc độ: 0 = buông xuống, 90 = chỉa ngang ra trước, âm = ra sau. fa/ba = tay trước/sau (1 trên, 2 dưới), fl/bl = chân. lean nghiêng thân, head nghiêng đầu, lift nhấc người. Thêm động tác mới ở đây; mọi nhân vật dùng chung rig.",
+ "aliases": {
+  "idle": "stand",
+  "speak": "talk",
+  "explain": "talk",
+  "jump": "celebrate",
+  "happy": "cheer",
+  "worry": "think",
+  "confused": "shrug",
+  "type": "work",
+  "box": "fight",
+  "lift": "carry",
+  "show": "present",
+  "cry": "sad",
+  "afraid": "scared",
+  "greet": "wave",
+  "agree": "nod",
+  "no": "shake_head"
+ },
+ "actions": {
+  "stand": {
+   "label": "đứng",
+   "frames": [
+    {
+     "pose": {}
+    }
+   ]
+  },
+  "walk": {
+   "label": "đi",
+   "loop": true,
+   "frames": [
+    {
+     "dur": 0.32,
+     "pose": {
+      "lean": 4,
+      "fa1": -28,
+      "fa2": -14,
+      "ba1": 28,
+      "ba2": 40,
+      "fl1": 26,
+      "fl2": 6,
+      "bl1": -22,
+      "bl2": -46
+     }
+    },
+    {
+     "dur": 0.32,
+     "pose": {
+      "lean": 4,
+      "fa1": 28,
+      "fa2": 40,
+      "ba1": -28,
+      "ba2": -14,
+      "fl1": -22,
+      "fl2": -46,
+      "bl1": 26,
+      "bl2": 6
+     }
+    }
+   ]
+  },
+  "run": {
+   "label": "chạy",
+   "loop": true,
+   "frames": [
+    {
+     "dur": 0.2,
+     "pose": {
+      "lean": 16,
+      "lift": 6,
+      "fa1": -50,
+      "fa2": 40,
+      "ba1": 60,
+      "ba2": 140,
+      "fl1": 55,
+      "fl2": -5,
+      "bl1": -40,
+      "bl2": -95
+     }
+    },
+    {
+     "dur": 0.2,
+     "pose": {
+      "lean": 16,
+      "lift": 6,
+      "fa1": 60,
+      "fa2": 140,
+      "ba1": -50,
+      "ba2": 40,
+      "fl1": -40,
+      "fl2": -95,
+      "bl1": 55,
+      "bl2": -5
+     }
+    }
+   ]
+  },
+  "talk": {
+   "label": "nói",
+   "loop": true,
+   "frames": [
+    {
+     "dur": 0.45,
+     "pose": {
+      "fa1": 35,
+      "fa2": 95,
+      "head": -3
+     }
+    },
+    {
+     "dur": 0.45,
+     "pose": {
+      "fa1": 50,
+      "fa2": 120,
+      "head": 3
+     }
+    }
+   ]
+  },
+  "point": {
+   "label": "chỉ",
+   "frames": [
+    {
+     "dur": 0.3,
+     "pose": {
+      "fa1": 88,
+      "fa2": 92,
+      "head": -4,
+      "lean": 3
+     }
+    }
+   ]
+  },
+  "look": {
+   "label": "nhìn xa",
+   "frames": [
+    {
+     "dur": 0.4,
+     "pose": {
+      "lean": 10,
+      "head": -10,
+      "fa1": 140,
+      "fa2": -110,
+      "ba1": -20,
+      "ba2": 30
+     }
+    }
+   ]
+  },
+  "think": {
+   "label": "suy nghĩ",
+   "frames": [
+    {
+     "dur": 0.4,
+     "pose": {
+      "head": 10,
+      "fa1": 25,
+      "fa2": 165,
+      "ba1": 10,
+      "ba2": 80
+     }
+    }
+   ]
+  },
+  "wave": {
+   "label": "vẫy tay",
+   "loop": true,
+   "frames": [
+    {
+     "dur": 0.25,
+     "pose": {
+      "fa1": 150,
+      "fa2": 175
+     }
+    },
+    {
+     "dur": 0.25,
+     "pose": {
+      "fa1": 150,
+      "fa2": 130
+     }
+    }
+   ]
+  },
+  "cheer": {
+   "label": "reo",
+   "loop": true,
+   "frames": [
+    {
+     "dur": 0.3,
+     "pose": {
+      "fa1": 155,
+      "fa2": 170,
+      "ba1": -155,
+      "ba2": -170,
+      "lift": 0
+     }
+    },
+    {
+     "dur": 0.3,
+     "pose": {
+      "fa1": 165,
+      "fa2": 175,
+      "ba1": -165,
+      "ba2": -175,
+      "lift": 14,
+      "fl1": 20,
+      "fl2": -20,
+      "bl1": -10,
+      "bl2": -30
+     }
+    }
+   ]
+  },
+  "celebrate": {
+   "label": "ăn mừng",
+   "loop": true,
+   "frames": [
+    {
+     "dur": 0.28,
+     "pose": {
+      "fa1": 140,
+      "fa2": 175,
+      "ba1": 20,
+      "ba2": 70,
+      "fl1": 40,
+      "fl2": -40,
+      "bl1": -10,
+      "bl2": -60,
+      "lift": 28
+     }
+    },
+    {
+     "dur": 0.28,
+     "pose": {
+      "fa1": 40,
+      "fa2": 120,
+      "ba1": 10,
+      "ba2": 40,
+      "fl1": 10,
+      "fl2": -10,
+      "bl1": -8,
+      "bl2": -8
+     }
+    }
+   ]
+  },
+  "nod": {
+   "label": "gật đầu",
+   "loop": true,
+   "frames": [
+    {
+     "dur": 0.3,
+     "pose": {
+      "head": 0
+     }
+    },
+    {
+     "dur": 0.3,
+     "pose": {
+      "head": 14
+     }
+    }
+   ]
+  },
+  "shake_head": {
+   "label": "lắc đầu",
+   "loop": true,
+   "frames": [
+    {
+     "dur": 0.22,
+     "pose": {
+      "head": -10
+     }
+    },
+    {
+     "dur": 0.22,
+     "pose": {
+      "head": 10
+     }
+    }
+   ]
+  },
+  "shrug": {
+   "label": "nhún vai",
+   "frames": [
+    {
+     "dur": 0.3,
+     "pose": {
+      "head": 8,
+      "fa1": 30,
+      "fa2": 120,
+      "ba1": -30,
+      "ba2": -120
+     }
+    }
+   ]
+  },
+  "facepalm": {
+   "label": "ôm mặt",
+   "frames": [
+    {
+     "dur": 0.35,
+     "pose": {
+      "head": 18,
+      "lean": 8,
+      "fa1": 60,
+      "fa2": 175
+     }
+    }
+   ]
+  },
+  "sad": {
+   "label": "buồn",
+   "frames": [
+    {
+     "dur": 0.6,
+     "pose": {
+      "head": 20,
+      "lean": 12,
+      "fa1": 4,
+      "fa2": 2,
+      "ba1": -4,
+      "ba2": -2,
+      "fl1": 3,
+      "bl1": -3
+     }
+    }
+   ]
+  },
+  "scared": {
+   "label": "sợ hãi",
+   "loop": true,
+   "frames": [
+    {
+     "dur": 0.08,
+     "pose": {
+      "lean": -10,
+      "head": -6,
+      "fa1": 120,
+      "fa2": 165,
+      "ba1": 100,
+      "ba2": 150,
+      "fl1": 18,
+      "fl2": -10,
+      "bl1": -18,
+      "bl2": -6
+     }
+    },
+    {
+     "dur": 0.08,
+     "pose": {
+      "lean": -12,
+      "head": -4,
+      "fa1": 124,
+      "fa2": 168,
+      "ba1": 104,
+      "ba2": 152,
+      "fl1": 18,
+      "fl2": -10,
+      "bl1": -18,
+      "bl2": -6
+     }
+    }
+   ]
+  },
+  "angry": {
+   "label": "tức giận",
+   "loop": true,
+   "frames": [
+    {
+     "dur": 0.1,
+     "pose": {
+      "lean": 8,
+      "head": -6,
+      "fa1": -10,
+      "fa2": 60,
+      "ba1": 10,
+      "ba2": -60,
+      "fl1": 14,
+      "bl1": -14
+     }
+    },
+    {
+     "dur": 0.1,
+     "pose": {
+      "lean": 9,
+      "head": -4,
+      "fa1": -12,
+      "fa2": 64,
+      "ba1": 12,
+      "ba2": -64,
+      "fl1": 14,
+      "bl1": -14
+     }
+    }
+   ]
+  },
+  "sit": {
+   "label": "ngồi",
+   "frames": [
+    {
+     "dur": 0.4,
+     "pose": {
+      "fl1": 88,
+      "fl2": 0,
+      "bl1": 82,
+      "bl2": -4,
+      "fa1": 40,
+      "fa2": 80,
+      "ba1": 30,
+      "ba2": 70
+     }
+    }
+   ],
+   "seated": true
+  },
+  "read": {
+   "label": "đọc",
+   "frames": [
+    {
+     "dur": 0.4,
+     "pose": {
+      "head": 14,
+      "fa1": 45,
+      "fa2": 120,
+      "ba1": 40,
+      "ba2": 115
+     }
+    }
+   ]
+  },
+  "work": {
+   "label": "làm việc / gõ phím",
+   "loop": true,
+   "frames": [
+    {
+     "dur": 0.15,
+     "pose": {
+      "head": 10,
+      "lean": 6,
+      "fa1": 50,
+      "fa2": 95,
+      "ba1": 45,
+      "ba2": 85,
+      "fl1": 88,
+      "fl2": 0,
+      "bl1": 82,
+      "bl2": -4
+     }
+    },
+    {
+     "dur": 0.15,
+     "pose": {
+      "head": 10,
+      "lean": 6,
+      "fa1": 45,
+      "fa2": 85,
+      "ba1": 50,
+      "ba2": 95,
+      "fl1": 88,
+      "fl2": 0,
+      "bl1": 82,
+      "bl2": -4
+     }
+    }
+   ],
+   "seated": true
+  },
+  "fight": {
+   "label": "đấm",
+   "loop": true,
+   "frames": [
+    {
+     "dur": 0.18,
+     "pose": {
+      "lean": 8,
+      "fa1": 60,
+      "fa2": 150,
+      "ba1": 70,
+      "ba2": 160,
+      "fl1": 25,
+      "fl2": 5,
+      "bl1": -25,
+      "bl2": -5
+     }
+    },
+    {
+     "dur": 0.14,
+     "pose": {
+      "lean": 14,
+      "fa1": 90,
+      "fa2": 92,
+      "ba1": 60,
+      "ba2": 150,
+      "fl1": 30,
+      "fl2": 5,
+      "bl1": -25,
+      "bl2": -5
+     }
+    }
+   ]
+  },
+  "push": {
+   "label": "đẩy",
+   "loop": true,
+   "frames": [
+    {
+     "dur": 0.5,
+     "pose": {
+      "lean": 28,
+      "fa1": 80,
+      "fa2": 95,
+      "ba1": 75,
+      "ba2": 92,
+      "fl1": 20,
+      "fl2": 5,
+      "bl1": -40,
+      "bl2": -30
+     }
+    },
+    {
+     "dur": 0.5,
+     "pose": {
+      "lean": 30,
+      "fa1": 84,
+      "fa2": 96,
+      "ba1": 78,
+      "ba2": 94,
+      "fl1": -10,
+      "fl2": -20,
+      "bl1": -30,
+      "bl2": -15
+     }
+    }
+   ]
+  },
+  "carry": {
+   "label": "khiêng / bê",
+   "frames": [
+    {
+     "dur": 0.4,
+     "pose": {
+      "lean": 4,
+      "fa1": 60,
+      "fa2": 100,
+      "ba1": 55,
+      "ba2": 95
+     }
+    }
+   ]
+  },
+  "present": {
+   "label": "giới thiệu",
+   "frames": [
+    {
+     "dur": 0.35,
+     "pose": {
+      "fa1": 70,
+      "fa2": 50,
+      "ba1": -10,
+      "ba2": 40,
+      "head": -4
+     }
+    }
+   ]
+  },
+  "handshake": {
+   "label": "bắt tay",
+   "loop": true,
+   "frames": [
+    {
+     "dur": 0.2,
+     "pose": {
+      "lean": 6,
+      "fa1": 55,
+      "fa2": 82
+     }
+    },
+    {
+     "dur": 0.2,
+     "pose": {
+      "lean": 6,
+      "fa1": 50,
+      "fa2": 72
+     }
+    }
+   ]
+  },
+  "hug": {
+   "label": "ôm",
+   "frames": [
+    {
+     "dur": 0.4,
+     "pose": {
+      "lean": 10,
+      "fa1": 80,
+      "fa2": 130,
+      "ba1": 75,
+      "ba2": 125
+     }
+    }
+   ]
+  },
+  "give": {
+   "label": "đưa đồ",
+   "frames": [
+    {
+     "dur": 0.4,
+     "pose": {
+      "lean": 8,
+      "fa1": 72,
+      "fa2": 82,
+      "head": 4
+     }
+    }
+   ]
+  },
+  "high_five": {
+   "label": "đập tay",
+   "frames": [
+    {
+     "dur": 0.25,
+     "pose": {
+      "fa1": 150,
+      "fa2": 165,
+      "lean": 5
+     }
+    }
+   ]
+  },
+  "dance": {
+   "label": "nhảy múa",
+   "loop": true,
+   "frames": [
+    {
+     "dur": 0.3,
+     "pose": {
+      "lean": -6,
+      "head": -8,
+      "fa1": 140,
+      "fa2": 100,
+      "ba1": -40,
+      "ba2": -90,
+      "fl1": 30,
+      "fl2": -10,
+      "bl1": -6,
+      "bl2": 0
+     }
+    },
+    {
+     "dur": 0.3,
+     "pose": {
+      "lean": 6,
+      "head": 8,
+      "fa1": -40,
+      "fa2": -90,
+      "ba1": 140,
+      "ba2": 100,
+      "fl1": 6,
+      "fl2": 0,
+      "bl1": -30,
+      "bl2": 10
+     }
+    }
+   ]
+  },
+  "sleep": {
+   "label": "ngủ gật",
+   "loop": true,
+   "frames": [
+    {
+     "dur": 1.2,
+     "pose": {
+      "head": 26,
+      "lean": 10,
+      "fl1": 88,
+      "fl2": 0,
+      "bl1": 82,
+      "bl2": -4,
+      "fa1": 30,
+      "fa2": 60,
+      "ba1": 20,
+      "ba2": 50
+     }
+    },
+    {
+     "dur": 1.2,
+     "pose": {
+      "head": 30,
+      "lean": 12,
+      "fl1": 88,
+      "fl2": 0,
+      "bl1": 82,
+      "bl2": -4,
+      "fa1": 30,
+      "fa2": 60,
+      "ba1": 20,
+      "ba2": 50
+     }
+    }
+   ],
+   "seated": true
+  },
+  "fall": {
+   "label": "ngã",
+   "frames": [
+    {
+     "dur": 0.25,
+     "pose": {
+      "lean": -30,
+      "head": -20,
+      "fa1": 150,
+      "fa2": 170,
+      "ba1": -150,
+      "ba2": -170,
+      "fl1": 60,
+      "fl2": 40,
+      "bl1": 20,
+      "bl2": 0,
+      "lift": 10
+     }
+    }
+   ]
+  },
+  "kneel": {
+   "label": "quỳ",
+   "frames": [
+    {
+     "dur": 0.4,
+     "pose": {
+      "lean": 6,
+      "head": 10,
+      "fl1": 85,
+      "fl2": 0,
+      "bl1": -5,
+      "bl2": -90,
+      "fa1": 20,
+      "fa2": 40
+     }
+    }
+   ]
+  },
+  "bow": {
+   "label": "cúi chào",
+   "frames": [
+    {
+     "dur": 0.4,
+     "pose": {
+      "lean": 40,
+      "head": 10,
+      "fa1": 10,
+      "fa2": 10,
+      "ba1": 10,
+      "ba2": 10
+     }
+    }
+   ]
+  }
+ }
+}

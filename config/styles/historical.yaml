@@ -1,0 +1,12 @@
+label: "Historical Cartoon – giấy cũ, màu cổ điển (lịch sử, văn minh)"
+bg: "#efe2c4"
+ink: "#2b2118"
+accent: ["#a23b2a", "#2f5d62", "#d9a441"]
+font: "'Palatino Linotype', 'Book Antiqua', Georgia, serif"
+title_font: "'Trajan Pro', 'Palatino Linotype', Georgia, serif"
+texture: paper
+ground: "#8c6a43"
+sky: ["#f3e3bf", "#e6cf9e"]
+character: {preset_hint: soldier, head: filled, head_fill: "#ffffff", shirt: "#a23b2a", face: true}
+captions: {font: "Georgia", size: 0.04, color: "#fff8e7", highlight: "#d9a441", outline: "#2b2118", y: 0.17}
+image_prompt_suffix: "painterly historical cartoon, clean cel shading, parchment tones"

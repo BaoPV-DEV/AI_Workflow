@@ -1,0 +1,55 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_lib/base.css">
+<script type="application/json" data-doc>
+{"desc": "Chữ động theo giọng đọc: từng cụm từ bật lên đúng lúc được đọc, từ khoá tô màu. Hợp Shorts/hook. Nên tắt phụ đề khi dùng nhiều (render.captions).",
+ "props": {"emphasize": "[từ] cần tô màu nhấn", "group": "số từ mỗi màn (mặc định 3)", "bg_word": "chữ mờ cực lớn phía sau (tuỳ chọn)"}}
+</script>
+<script type="application/json" data-demo>
+{"duration": 4, "text": "Tại sao máy yếu vẫn làm được video triệu view?", "props": {"emphasize": ["máy yếu", "triệu view"], "bg_word": "?"},
+ "words": [{"word":"Tại","start":0,"end":0.25},{"word":"sao","start":0.25,"end":0.5},{"word":"máy","start":0.55,"end":0.8},{"word":"yếu","start":0.8,"end":1.1},{"word":"vẫn","start":1.2,"end":1.4},{"word":"làm","start":1.4,"end":1.6},{"word":"được","start":1.6,"end":1.85},{"word":"video","start":1.9,"end":2.3},{"word":"triệu","start":2.4,"end":2.75},{"word":"view?","start":2.75,"end":3.3}]}
+</script>
+<script src="_lib/runtime.js"></script>
+<style>
+  .stage { padding: 0 7%; }
+  .grp { position: absolute; inset: 0; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: .1em .3em; padding: 0 7%; }
+  .w { display: inline-block; font-family: var(--title-font); font-weight: 900; text-transform: uppercase; }
+  .w.em { color: var(--a1); }
+  .bgw { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--title-font); font-weight: 900; opacity: .06; font-size: calc(var(--W) * .9); }
+</style>
+</head><body>
+<script>
+let groups = [], bgw;
+VF.scene({
+  setup(inp, root) {
+    const { el } = VF, p = inp.props;
+    if (p.bg_word) bgw = el('div', { class: 'bgw', text: p.bg_word }, root);
+    let words = inp.words && inp.words.length ? inp.words : null;
+    if (!words) { // không có mốc thời gian: chia đều
+      const ws = (inp.text || '').split(/\s+/).filter(Boolean), d = inp.duration / Math.max(ws.length, 1);
+      words = ws.map((w, i) => ({ word: w, start: i * d, end: (i + 1) * d }));
+    }
+    const em = (p.emphasize || []).join(' ').toLowerCase().split(/\s+/).filter(Boolean);
+    const n = p.group || 3;
+    groups = [];
+    for (let i = 0; i < words.length; i += n) {
+      const g = el('div', { class: 'grp fs-xl' }, root), ws = words.slice(i, i + n);
+      const spans = ws.map(w => { const clean = w.word.toLowerCase().replace(/[^\p{L}\p{N}]/gu, ''); return { s: el('span', { class: 'w' + (em.includes(clean) ? ' em' : ''), text: w.word }, g), t: w.start }; });
+      groups.push({ g, spans, t0: ws[0].start, t1: words[i + n] ? words[i + n].start : 1e9 });
+    }
+  },
+  draw(t) {
+    groups.forEach(G => {
+      const on = t >= G.t0 - 0.05 && t < G.t1;
+      G.g.style.display = on ? 'flex' : 'none';
+      if (!on) return;
+      G.spans.forEach(o => {
+        const k = VF.prog(t, o.t - 0.05, 0.22, 'back');
+        o.s.style.opacity = t >= o.t - 0.05 ? 1 : 0;
+        o.s.style.transform = `scale(${0.6 + 0.4 * k}) rotate(${(1 - k) * -6}deg)`;
+      });
+    });
+    if (bgw) bgw.style.transform = `scale(${1 + t * 0.03})`;
+  },
+});
+</script>
+</body></html>

@@ -1,0 +1,47 @@
+# AI Workflow – cấu hình chung. Mọi đường dẫn tương đối tính từ thư mục gốc repo.
+
+render_mode: CODE_GRAPHICS        # CODE_GRAPHICS | LOW_GPU_API | COMFYUI_CLOUD
+workspace: workspace
+fps: 30
+default_aspect: "9:16"            # 9:16 | 16:9 | 1:1
+default_lang: vi
+default_style: classic_light      # tên file trong config/styles/
+
+tts:
+  engine: edge                    # edge | piper | kokoro | silent
+  voices:                         # giọng mặc định theo ngôn ngữ (edge-tts)
+    vi: vi-VN-HoaiMyNeural
+    en: en-US-AndrewNeural
+  rate: "+0%"
+  piper_model: ""                 # đường dẫn .onnx nếu dùng piper
+
+align:
+  engine: auto                    # auto | whisper | estimate (auto: dùng mốc từ edge-tts, thiếu thì whisper, cuối cùng ước lượng)
+  whisper_model: base             # tiny | base (int8, CPU)
+
+render:
+  encoder: auto                   # auto | h264_nvenc | libx264 | h264_qsv
+  crf: 20
+  preset: veryfast
+  workers: 2                      # số cảnh quay song song (MX250: 1-2)
+  captions: true                  # đốt phụ đề karaoke vào video
+  caption_words: 4                # số từ mỗi cụm phụ đề
+  scene_pad: 0.25                 # giây nghỉ cuối mỗi cảnh
+  music: ""                       # nhạc nền mặc định (đường dẫn), tự giảm âm khi có lời
+
+visual:
+  comfyui_url: "http://127.0.0.1:8188"   # đổi sang endpoint RunPod/Vast khi thuê GPU
+  fal_key_env: FAL_KEY
+
+agent:
+  # Đổi tên model nếu Anthropic ra bản mới. "plan" viết kịch bản, "edit"/"translate" là việc nhỏ.
+  models:
+    plan: claude-sonnet-5-5
+    edit: claude-haiku-5-5
+    translate: claude-haiku-5-5
+  max_tokens: 8000
+  budget_tokens_per_run: 60000    # agent tự dừng nếu vượt
+  # Giá USD / 1 triệu token. Để trống (null) thì chỉ báo số token. Kiểm tra giá tại anthropic.com/pricing.
+  prices:
+    claude-sonnet-5-5: {input: null, output: null, cache_read: null, cache_write: null}
+    claude-haiku-5-5: {input: null, output: null, cache_read: null, cache_write: null}

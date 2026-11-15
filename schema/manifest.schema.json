@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "project_manifest.json",
+  "description": "File trung tâm. Claude chỉ viết các trường 'authored'; engine tự điền audio_path, duration, word_timings.",
+  "type": "object",
+  "required": ["project_id", "scenes"],
+  "properties": {
+    "project_id": {"type": "string", "pattern": "^[a-z0-9_\\-]+$"},
+    "title": {"type": "string"},
+    "aspect_ratio": {"enum": ["9:16", "16:9", "1:1"]},
+    "resolution": {"type": "string", "pattern": "^[0-9]+x[0-9]+$"},
+    "fps": {"type": "integer", "minimum": 12, "maximum": 60},
+    "lang": {"type": "string"},
+    "voice": {"type": "string"},
+    "style": {"type": "string", "description": "tên preset trong config/styles"},
+    "render_mode": {"enum": ["CODE_GRAPHICS", "LOW_GPU_API", "COMFYUI_CLOUD"]},
+    "music": {"type": "string"},
+    "cast": {
+      "type": "object",
+      "description": "Nhân vật dùng trong video. Khoá = tên ngắn. Giá trị ghi đè style.",
+      "additionalProperties": {"$ref": "#/$defs/character"}
+    },
+    "scenes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/scene"}}
+  },
+  "$defs": {
+    "character": {
+      "type": "object",
+      "properties": {
+        "preset": {"type": "string", "description": "tên trong library/characters.json"},
+        "head": {"enum": ["hollow", "filled"]},
+        "ink": {"type": "string"},
+        "shirt": {"type": "string"},
+        "hat": {"enum": ["none", "beanie", "cap", "crown", "helmet", "hair"]},
+        "hat_color": {"type": "string"},
+        "scale": {"type": "number", "minimum": 0.5, "maximum": 1.5},
+        "face": {"type": "boolean"}
+      }
+    },
+    "beat": {
+      "type": "object",
+      "required": ["act"],
+      "properties": {
+        "at": {"description": "từ trong lời đọc (chép đúng), '60%' hoặc số giây", "type": ["string", "number"]},
+        "act": {"type": "string"},
+        "who": {"type": "string"},
+        "move": {"enum": ["enter_left", "enter_right", "exit_left", "exit_right", "left", "right", "center", "stay"]},
+        "mood": {"enum": ["neutral", "happy", "sad", "surprised", "angry", "scared", "tired", "curious", "proud"]},
+        "face": {"enum": ["left", "right"]},
+        "hold": {"type": "string"},
+        "say": {"type": "string", "description": "bong bóng thoại ngắn"}
+      }
+    },
+    "scene": {
+      "type": "object",
+      "required": ["scene_id", "visual_type"],
+      "properties": {
+        "scene_id": {"type": ["integer", "string"]},
+        "voice_text": {"type": "string"},
+        "visual_type": {"enum": ["html_animation", "svg_graphic", "image", "video", "comfyui", "color"]},
+        "template_name": {"type": "string"},
+        "props": {"type": "object"},
+        "svg_code": {"type": "string"},
+        "src": {"type": "string", "description": "ảnh/clip trong assets/ (image, video)"},
+        "prompt": {"type": "string", "description": "prompt cho comfyui / API ảnh"},
+        "workflow": {"type": "string", "description": "file trong templates/comfy_workflows"},
+        "camera": {"enum": ["none", "zoom_in", "zoom_out", "pan_left", "pan_right"]},
+        "acting": {"type": "array", "items": {"$ref": "#/$defs/beat"}},
+        "min_duration": {"type": "number"},
+        "pause": {"type": "number"},
+        "captions": {"type": "boolean", "description": "false = không đốt phụ đề cho cảnh này"},
+        "audio_path": {"type": "string", "description": "engine điền"},
+        "duration": {"type": "number", "description": "engine điền"},
+        "word_timings": {"type": "array", "description": "engine điền"}
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+label: "Beanie Studio Tech – studio trắng, lưới xám, UI kính xanh (AI, công cụ, sự nghiệp)"
+bg: "#f7f9fc"
+ink: "#111111"
+accent: ["#00b4ff", "#e63946", "#ffd23f"]
+font: "'Segoe UI', Arial, sans-serif"
+title_font: "'Segoe UI Semibold', Arial, sans-serif"
+texture: grid
+ground: "#c9d3e0"
+character: {preset_hint: beanie, head: filled, head_fill: "#ffffff", shirt: "#ffd23f", hat: beanie, hat_color: "#e63946", face: true}
+captions: {font: "Arial Black", size: 0.04, color: "#111111", highlight: "#00b4ff", outline: "#ffffff", y: 0.15}
+image_prompt_suffix: "clean high-key studio, glassmorphism UI, flat 2D"

@@ -1,0 +1,49 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_lib/base.css">
+<script type="application/json" data-doc>
+{"desc": "So sánh 2 phía (trước/sau, A vs B). Dọc: trên/dưới; ngang: trái/phải.",
+ "props": {"left": "{title, items:[≤4 ý]} phía 1", "right": "{title, items} phía 2", "vs": "chữ ở giữa, mặc định 'VS'", "winner": "left|right|none – phía được tô nổi"}}
+</script>
+<script type="application/json" data-demo>
+{"duration": 6, "props": {"left": {"title": "Cách cũ", "items": ["Claude viết lại cả pipeline", "Tốn 50k token/video"]}, "right": {"title": "Cách mới", "items": ["Chỉ sửa 1 cảnh", "~3k token/video"]}, "winner": "right"}}
+</script>
+<script src="_lib/runtime.js"></script>
+<style>
+  .grid { position: absolute; inset: 10% 6%; display: grid; gap: 4%; grid-template-columns: 1fr 1fr; }
+  body.portrait .grid { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; inset: 10% 7% 27%; }
+  .side { border: 6px solid var(--ink); border-radius: 28px; padding: 6%; background: color-mix(in srgb, var(--bg) 85%, var(--ink)); }
+  .side.win { border-color: var(--a1); box-shadow: 0 0 0 8px color-mix(in srgb, var(--a1) 30%, transparent); }
+  .side.lose { opacity: .75; }
+  .st { margin-bottom: 5%; }
+  .li { font-weight: 700; margin: 3% 0; }
+  .vs { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 1.8em; height: 1.8em; border-radius: 50%; display: grid; place-items: center; background: var(--a1); color: #fff; font-weight: 900; z-index: 5; }
+  body.portrait .vs { top: 45%; }
+</style>
+</head><body>
+<script>
+let sides = [], vs;
+VF.scene({
+  setup(inp, root) {
+    const p = inp.props, { el } = VF;
+    const g = el('div', { class: 'grid' }, root);
+    sides = ['left', 'right'].map((k, i) => {
+      const d = p[k] || {}, s = el('div', { class: 'side' + (p.winner === k ? ' win' : p.winner && p.winner !== 'none' ? ' lose' : '') }, g);
+      el('div', { class: 'st title fs-l', text: d.title || '' }, s);
+      const lis = (d.items || []).map(x => el('div', { class: 'li fs-m', text: (p.winner === k ? '✔ ' : p.winner && p.winner !== 'none' ? '✘ ' : '• ') + x }, s));
+      return { s, lis, t: i === 0 ? 0.1 : inp.duration * 0.45 };
+    });
+    vs = el('div', { class: 'vs fs-m', text: p.vs || 'VS' }, root);
+  },
+  draw(t) {
+    sides.forEach(o => {
+      const k = VF.prog(t, o.t, 0.5, 'back');
+      o.s.style.opacity = VF.clamp((t - o.t) / 0.25);
+      o.s.style.transform = `scale(${0.85 + 0.15 * k})`;
+      o.lis.forEach((li, i) => { li.style.opacity = VF.prog(t, o.t + 0.35 + i * 0.4, 0.3); });
+    });
+    const kv = VF.prog(t, sides[1].t - 0.3, 0.4, 'elastic');
+    vs.style.transform = `translate(-50%, -50%) scale(${kv})`;
+  },
+});
+</script>
+</body></html>

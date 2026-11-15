@@ -1,0 +1,10 @@
+label: "Classic Light – nền trắng, nét đen, tối đa 3 màu nhấn (giải thích nhanh, tư duy)"
+bg: "#ffffff"
+ink: "#111111"
+accent: ["#ff3b30", "#0a84ff", "#ffcc00"]
+font: "'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+title_font: "'Segoe UI Black', 'Arial Black', Impact, sans-serif"
+ground: "#111111"
+character: {preset_hint: classic, head: hollow, shirt: none, face: true}
+captions: {font: "Arial Black", size: 0.042, color: "#111111", highlight: "#ff3b30", outline: "#ffffff", y: 0.16}
+image_prompt_suffix: "minimalist flat vector, white background, black line art"

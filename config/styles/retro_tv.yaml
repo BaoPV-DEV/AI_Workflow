@@ -1,0 +1,11 @@
+label: "Retro TV – màn CRT, scanline, màu bão hoà (tin tức, giật gân, bí ẩn)"
+bg: "#14213d"
+ink: "#f1f1f1"
+accent: ["#fca311", "#e63946", "#2ec4b6"]
+font: "'Consolas', 'Courier New', monospace"
+title_font: "'Arial Black', Impact, sans-serif"
+texture: scanlines
+ground: "#fca311"
+character: {head: hollow, shirt: none, face: true}
+captions: {font: "Consolas", size: 0.04, color: "#ffffff", highlight: "#fca311", outline: "#000000", y: 0.16, upper: true}
+image_prompt_suffix: "retro CRT television aesthetic, saturated colors, scanlines"

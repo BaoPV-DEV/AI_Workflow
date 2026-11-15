@@ -1,0 +1,27 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_lib/base.css">
+<script type="application/json" data-doc>
+{"desc": "Dùng nội bộ cho visual_type svg_graphic: hiển thị svg_code toàn khung. Animation CSS/SMIL trong SVG được tua đúng thời điểm.",
+ "props": {"svg": "(engine tự điền từ svg_code)", "fit": "contain|cover"}}
+</script>
+<script type="application/json" data-demo>
+{"duration": 3, "props": {"svg": "<svg viewBox='0 0 100 100'><style>@keyframes r{to{transform:rotate(360deg)}} .s{transform-origin:50px 50px;animation:r 3s linear infinite}</style><rect class='s' x='30' y='30' width='40' height='40' fill='#0a84ff'/></svg>"}}
+</script>
+<script src="_lib/runtime.js"></script>
+<style> .holder svg { width: 100%; height: 100%; } </style>
+</head><body>
+<script>
+let holder, svgEl;
+VF.scene({
+  setup(inp, root) {
+    holder = VF.el('div', { class: 'layer holder', html: inp.props.svg || '' }, root);
+    svgEl = holder.querySelector('svg');
+    if (svgEl) { svgEl.setAttribute('preserveAspectRatio', inp.props.fit === 'cover' ? 'xMidYMid slice' : 'xMidYMid meet'); svgEl.pauseAnimations && svgEl.pauseAnimations(); }
+  },
+  draw(t) {
+    if (svgEl && svgEl.setCurrentTime) svgEl.setCurrentTime(t);
+    holder.style.opacity = VF.prog(t, 0, 0.3);
+  },
+});
+</script>
+</body></html>

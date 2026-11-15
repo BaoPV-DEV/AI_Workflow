@@ -1,0 +1,62 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_lib/base.css">
+<script type="application/json" data-doc>
+{"desc": "Dòng thời gian 2-6 mốc, chấm sáng chạy qua từng mốc.",
+ "props": {"title": "tiêu đề", "events": "[{year, label}] 2-6 mốc, label ≤5 từ", "at": "[mốc] lúc tới từng mốc (tuỳ chọn)"}}
+</script>
+<script type="application/json" data-demo>
+{"duration": 6, "props": {"title": "Lịch sử video AI", "events": [{"year": "2022", "label": "Ảnh AI phổ biến"}, {"year": "2024", "label": "Video AI ra mắt"}, {"year": "2026", "label": "Pipeline tự động"}]}}
+</script>
+<script src="_lib/runtime.js"></script>
+<style>
+  .ttl { position: absolute; left: 7%; right: 7%; top: 8%; text-align: center; }
+  .ev { position: absolute; transform: translate(-50%, -50%); text-align: center; width: 30%; }
+  body.portrait .ev { transform: translate(0, -50%); text-align: left; width: 60%; }
+  .yr { font-family: var(--title-font); font-weight: 900; color: var(--a1); }
+  .lb { font-weight: 700; }
+</style>
+</head><body>
+<script>
+let svg, line, dot, evs = [], times = [], ttl, pts = [], portrait;
+VF.scene({
+  setup(inp, root) {
+    const p = inp.props, { el } = VF, W = inp.width, H = inp.height, E = p.events || [];
+    portrait = H > W;
+    ttl = el('div', { class: 'ttl title fs-l', text: p.title || '' }, root);
+    svg = el('svg', { width: W, height: H, class: 'layer' }, root);
+    const a = portrait ? [W * 0.18, H * 0.24] : [W * 0.1, H * 0.55], b = portrait ? [W * 0.18, H * 0.8] : [W * 0.9, H * 0.55];
+    el('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: 'var(--ink)', 'stroke-width': 8, opacity: .2, 'stroke-linecap': 'round' }, svg);
+    line = el('line', { x1: a[0], y1: a[1], x2: a[0], y2: a[1], stroke: 'var(--a1)', 'stroke-width': 8, 'stroke-linecap': 'round' }, svg);
+    pts = E.map((_, i) => { const k = E.length === 1 ? 0.5 : i / (E.length - 1); return [VF.lerp(a[0], b[0], k), VF.lerp(a[1], b[1], k)]; });
+    pts.forEach(q => el('circle', { cx: q[0], cy: q[1], r: 18, fill: 'var(--bg)', stroke: 'var(--ink)', 'stroke-width': 6 }, svg));
+    dot = el('circle', { r: 24, fill: 'var(--a1)' }, svg);
+    evs = E.map((e, i) => {
+      const d = el('div', { class: 'ev' }, root);
+      el('div', { class: 'yr fs-l', text: e.year }, d); el('div', { class: 'lb fs-m', text: e.label }, d);
+      const q = pts[i];
+      if (portrait) { d.style.left = q[0] + 60 + 'px'; d.style.top = q[1] + 'px'; }
+      else { d.style.left = q[0] + 'px'; d.style.top = q[1] + (i % 2 ? 150 : -150) + 'px'; }
+      return d;
+    });
+    const d = inp.duration;
+    times = E.map((_, i) => VF.at((p.at || [])[i], 0.5 + i * (d - 1.2) / Math.max(E.length - 1, 1)));
+    this.a = a;
+  },
+  draw(t) {
+    ttl.style.opacity = VF.prog(t, 0, 0.4);
+    let pos = pts[0] || [0, 0];
+    for (let i = 0; i < pts.length; i++) {
+      if (t >= times[i]) pos = pts[i];
+      if (i + 1 < pts.length && t > times[i] && t < times[i + 1]) {
+        const k = VF.prog(t, times[i + 1] - 0.6, 0.6, 'inOut');
+        pos = [VF.lerp(pts[i][0], pts[i + 1][0], k), VF.lerp(pts[i][1], pts[i + 1][1], k)];
+      }
+      evs[i].style.opacity = VF.prog(t, times[i], 0.35);
+    }
+    dot.setAttribute('cx', pos[0]); dot.setAttribute('cy', pos[1]);
+    dot.setAttribute('opacity', VF.prog(t, (times[0] || 0) - 0.2, 0.2));
+    line.setAttribute('x2', pos[0]); line.setAttribute('y2', pos[1]);
+  },
+});
+</script>
+</body></html>

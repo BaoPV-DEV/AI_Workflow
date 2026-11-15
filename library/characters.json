@@ -1,0 +1,16 @@
+{
+  "_doc": "Preset nhân vật. Trong manifest: \"cast\": {\"Bo\": {\"preset\": \"beanie\"}, \"Mi\": {\"preset\": \"kid\", \"shirt\": \"#e91e63\"}}. Trường: head hollow|filled|solid, ink, shirt (màu hoặc none), hat none|beanie|cap|crown|helmet|hair, hat_color, scale 0.5-1.5, face true/false.",
+  "characters": {
+    "classic": {"head": "hollow", "shirt": "none", "hat": "none", "face": true},
+    "faceless": {"head": "hollow", "shirt": "none", "hat": "none", "face": false},
+    "beanie": {"head": "filled", "head_fill": "#ffffff", "shirt": "#ffd23f", "hat": "beanie", "hat_color": "#e63946", "face": true},
+    "cozy": {"head": "filled", "head_fill": "#ffffff", "shirt": "#7fb3d5", "hat": "none", "face": true},
+    "kid": {"head": "filled", "head_fill": "#ffffff", "shirt": "#ff8a65", "hat": "hair", "hat_color": "#3e2723", "scale": 0.78, "face": true},
+    "elder": {"head": "filled", "head_fill": "#ffffff", "shirt": "#8d6e63", "hat": "hair", "hat_color": "#cfd8dc", "scale": 0.95, "face": true},
+    "boss": {"head": "filled", "head_fill": "#ffffff", "shirt": "#263238", "hat": "none", "scale": 1.08, "face": true},
+    "worker": {"head": "filled", "head_fill": "#ffffff", "shirt": "#1976d2", "hat": "cap", "hat_color": "#ff9800", "face": true},
+    "king": {"head": "filled", "head_fill": "#ffffff", "shirt": "#6a1b9a", "hat": "crown", "scale": 1.05, "face": true},
+    "soldier": {"head": "filled", "head_fill": "#ffffff", "shirt": "#556b2f", "hat": "helmet", "hat_color": "#6b7b4b", "face": true},
+    "shadow": {"head": "solid", "shirt": "none", "hat": "none", "face": false}
+  }
+}

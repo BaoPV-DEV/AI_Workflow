@@ -1,0 +1,10 @@
+label: "Classic Dark – nền đen, nét trắng, màu nhấn neon (tâm lý, triết lý, kể chuyện ngắn)"
+bg: "#0b0b0d"
+ink: "#f5f5f5"
+accent: ["#ff2d55", "#30d5c8", "#ffd60a"]
+font: "'Segoe UI', Arial, sans-serif"
+title_font: "'Segoe UI Black', 'Arial Black', Impact, sans-serif"
+ground: "#f5f5f5"
+character: {head: hollow, shirt: none, face: true}
+captions: {font: "Arial Black", size: 0.042, color: "#ffffff", highlight: "#ffd60a", outline: "#000000", y: 0.16}
+image_prompt_suffix: "minimalist white line art on pure black background"

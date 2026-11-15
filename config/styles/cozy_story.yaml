@@ -1,0 +1,12 @@
+label: "Cozy Storytelling – màu ấm, ánh sáng dịu (chuyện đời thường, cảm xúc)"
+bg: "#fdf3e7"
+ink: "#3b2f2f"
+accent: ["#e07a5f", "#81b29a", "#f2cc8f"]
+font: "'Segoe UI', 'Trebuchet MS', sans-serif"
+title_font: "'Georgia', serif"
+texture: paper
+ground: "#c8a27a"
+sky: ["#ffe8cc", "#fdf3e7"]
+character: {preset_hint: cozy, head: filled, head_fill: "#ffffff", shirt: "#81b29a", face: true}
+captions: {font: "Arial Rounded MT Bold", size: 0.04, color: "#ffffff", highlight: "#f2cc8f", outline: "#3b2f2f", y: 0.17}
+image_prompt_suffix: "cozy 2D cartoon illustration, warm soft light, gentle colors"

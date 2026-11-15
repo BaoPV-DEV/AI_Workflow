@@ -1,0 +1,10 @@
+label: "Dynamic Meme – nét dày, màu tươi, chữ to viền đen (Shorts giải trí, viral)"
+bg: "#fff7d6"
+ink: "#000000"
+accent: ["#ff4d00", "#00a8ff", "#ffe600"]
+font: "'Arial Black', Impact, sans-serif"
+title_font: "Impact, 'Arial Black', sans-serif"
+ground: "#000000"
+character: {head: filled, head_fill: "#ffffff", shirt: "none", face: true, line: 14}
+captions: {font: "Impact", size: 0.055, color: "#ffffff", highlight: "#ffe600", outline: "#000000", y: 0.2, upper: true}
+image_prompt_suffix: "bold meme cartoon, thick outlines, saturated colors"
