@@ -46,8 +46,10 @@ def cmd_doctor(a):
         html.close()
     except Exception as e:
         print(f"✘ trình duyệt: {e}")
-    import os
-    print(f"{ok(os.environ.get('ANTHROPIC_API_KEY'))} ANTHROPIC_API_KEY (không có vẫn dùng được: vf prompt + vf import)")
+    from engine.agent.llm import backend
+    be = backend()
+    names = {"api": "API key", "cli": "Claude Code (gói Claude của bạn)", "manual": "chưa kết nối – vẫn dùng được Claude Desktop hoặc vf prompt + vf import"}
+    print(f"{ok(be != 'manual')} AI tự gọi: {names[be]}")
 
 
 def cmd_catalog(a):
