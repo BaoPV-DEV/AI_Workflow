@@ -44,7 +44,7 @@ Thử ngay với video mẫu: `xcopy /e /i examples\demo_pipeline workspace\demo
 - **Rig người que** 11 khớp, 32 động tác, cảm xúc khuôn mặt, đạo cụ, bong bóng thoại, tự đi bộ khi đổi vị trí – tương thích định dạng `actions.json` của VF Studio.
 - **8 style** (`config/styles/`) lấy cảm hứng từ stickman-video-director: classic light/dark, beanie tech, cozy, historical, retro TV, neon news, dynamic meme.
 - **Mini agent** (`engine/agent/`): vòng lặp tool-use như Claude Code thu nhỏ – prompt caching, định tuyến model, trần token, rút gọn lịch sử.
-- **Web Studio** (`web/`): sửa cảnh, xem trước theo thời gian thực, render, sửa bằng lời, dịch, xem token đã dùng.
+- **Web Studio** (`vf studio`): bố cục bàn dựng – kịch bản bên trái (gõ lời đọc như soạn văn bản), màn xem giữa phát kèm giọng đọc và tự sang cảnh tiếp, bảng chỉnh bên phải (form theo từng kiểu cảnh, trình chỉnh diễn xuất bằng menu, không cần sửa JSON), timeline phía dưới có ảnh thu nhỏ và kéo thả đổi thứ tự. Tự lưu, hoàn tác `Ctrl+Z`, phím tắt `Space` / `←` `→` / `Ctrl+Enter` (xuất nháp), thanh tiến độ khi render, 4 bước Kịch bản → Giọng đọc → Xem trước → Xuất video luôn hiện bước tiếp theo.
 - **5 skill Claude Code** (`.claude/skills/`) và `CLAUDE.md` ngắn.
 
 Tài liệu: [kiến trúc](docs/ARCHITECTURE.md) · [tối ưu token](docs/TOKEN_STRATEGY.md) · [lộ trình](docs/ROADMAP.md) · [tech stack gốc](docs/tech_stack.md) · [catalog](CATALOG.md).

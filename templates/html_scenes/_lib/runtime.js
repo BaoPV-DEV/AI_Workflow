@@ -123,6 +123,8 @@
     requestAnimationFrame(loop);
   }
 
+  window.addEventListener('resize', () => { if (input && (qs.has('studio') || qs.has('play'))) fit(); });
+
   window.addEventListener('message', e => {
     const m = e.data || {};
     if (m.type === 'vf-input') { init(m.input); }

@@ -34,6 +34,27 @@ def run_job(args: list[str]) -> str:
     return jid
 
 
+MOODS = ["neutral", "happy", "sad", "surprised", "angry", "scared", "tired", "curious", "proud"]
+MOVES = ["stay", "enter_left", "enter_right", "exit_left", "exit_right", "left", "center", "right"]
+HOLDS = ["book", "phone", "coin", "money", "gift", "bulb", "sign", "laptop", "cup", "flag", "sword", "key", "star",
+         "trophy", "magnifier", "map", "briefcase"]
+
+
+def status(d: Path, data: dict) -> dict:
+    """Tiến độ của project: đã có giọng, ảnh xem trước, video chưa – để giao diện hiện đúng bước tiếp theo."""
+    scenes = data.get("scenes", [])
+    keys = [manifest.scene_key(s) for s in scenes]
+    mt = lambda p: int(p.stat().st_mtime) if p.exists() else 0
+    thumbs = {k: mt(d / "preview" / f"{k}.jpg") for k in keys if (d / "preview" / f"{k}.jpg").exists()}
+    audio = {k: f"/files/{d.name}/assets/{k}.wav" for k, s in zip(keys, scenes)
+             if s.get("duration") and (d / "assets" / f"{k}.wav").exists()}
+    out = d / "out"
+    videos = sorted((p.name for p in out.glob("*.mp4")), key=lambda n: "_draft" in n) if out.exists() else []
+    return {"scenes": len(scenes), "voiced": len(audio), "thumbs": thumbs, "audio": audio,
+            "videos": {v: mt(out / v) for v in videos}, "duration": round(sum(s.get("duration", 0) for s in scenes), 1),
+            "mtime": mt(d / manifest.MANIFEST)}
+
+
 def scene_input(pid: str, sid: str) -> dict:
     """Giống engine.visual.html.scene_input nhưng dùng được cả khi chưa có giọng đọc."""
     d, data = manifest.load(pid)
@@ -110,23 +131,28 @@ class H(SimpleHTTPRequestHandler):
             if u.startswith("/files/"):
                 return self._file(self._safe(config.workspace(), u[7:]))
             if u == "/api/meta":
+                acts = config.library("actions")
                 return self._json({"styles": {s: config.style(s) for s in config.list_styles()},
-                                   "templates": catalog.templates(), "actions": list(config.library("actions")["actions"]),
-                                   "characters": list(config.library("characters")["characters"])})
+                                   "templates": catalog.templates(with_demo=True),
+                                   "actions": {k: v.get("label", k) for k, v in acts["actions"].items()},
+                                   "characters": config.library("characters")["characters"],
+                                   "moods": MOODS, "moves": MOVES, "holds": HOLDS,
+                                   "voices": config.settings().get("tts", {}).get("voices", {})})
             if u == "/api/projects":
                 out = []
                 for m in sorted(config.workspace().glob("*/" + manifest.MANIFEST), key=lambda p: -p.stat().st_mtime):
                     data = json.loads(m.read_text(encoding="utf-8"))
-                    out.append({"id": m.parent.name, "title": data.get("title", ""), "scenes": len(data.get("scenes", [])),
-                                "videos": [p.name for p in (m.parent / "out").glob("*.mp4")] if (m.parent / "out").exists() else []})
+                    out.append({"id": m.parent.name, "title": data.get("title", ""), **status(m.parent, data)})
                 return self._json(out)
             if u.startswith("/api/p/"):
                 parts = u.split("/")[3:]
                 if len(parts) == 1:
                     d, data = manifest.load(parts[0])
-                    return self._json({"manifest": data, "errors": manifest.validate(data)})
+                    return self._json({"manifest": data, "errors": manifest.validate(data), "status": status(d, data)})
                 if parts[1] == "scene":
                     return self._json(scene_input(parts[0], parts[2]))
+            if u == "/api/jobs":
+                return self._json({k: {kk: v[kk] for kk in ("cmd", "done", "code")} for k, v in JOBS.items()})
             if u.startswith("/api/jobs/"):
                 return self._json(JOBS.get(u.split("/")[-1], {"error": "không có job"}))
             if u == "/api/usage":

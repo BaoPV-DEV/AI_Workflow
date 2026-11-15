@@ -10,12 +10,16 @@ import re
 from . import config
 
 
-def templates() -> dict[str, dict]:
+def templates(with_demo: bool = False) -> dict[str, dict]:
     out = {}
     for p in sorted((config.TEMPLATES / "html_scenes").glob("*.html")):
-        m = re.search(r'<script type="application/json" data-doc>\s*(\{.*?\})\s*</script>', p.read_text(encoding="utf-8"), re.S)
+        src = p.read_text(encoding="utf-8")
+        m = re.search(r'<script type="application/json" data-doc>\s*(\{.*?\})\s*</script>', src, re.S)
         if m and p.stem != "svg_wrapper":
             out[p.stem] = json.loads(m.group(1))
+            if with_demo:
+                d = re.search(r'<script type="application/json" data-demo>\s*(\{.*?\})\s*</script>', src, re.S)
+                out[p.stem]["demo"] = json.loads(d.group(1)).get("props", {}) if d else {}
     return out
 
 
