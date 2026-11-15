@@ -121,7 +121,11 @@ async function pgLibrary() {
   $('#addSeries').onclick = async () => { const n = $('#newSeries').value.trim(); if (!n) return $('#newSeries').focus(); await api('/api/series', { method: 'POST', body: { name: n } }); toast('Đã tạo series ' + n); pgLibrary(); };
   P.querySelectorAll('[data-open]').forEach(b => b.onclick = () => go('editor', b.dataset.open));
   P.querySelectorAll('[data-render]').forEach(b => b.onclick = () => go('render', b.dataset.render));
-  P.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { if (!confirm('Chuyển video này vào thùng rác (workspace/_trash)?')) return; await api('/api/p/' + b.dataset.del, { method: 'DELETE' }); if (PID === b.dataset.del) { PID = null; localStorage.removeItem('vf.pid'); } pgLibrary(); });
+  P.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    const title = b.closest('.ep')?.querySelector('.t')?.textContent || b.dataset.del;
+    if (!confirm(`Chuyển "${title}" vào thùng rác (workspace/_trash)? Các tập khác trong series không bị ảnh hưởng.`)) return;
+    await api('/api/p/' + b.dataset.del, { method: 'DELETE' }); if (PID === b.dataset.del) { PID = null; localStorage.removeItem('vf.pid'); } pgLibrary();
+  });
   P.querySelectorAll('[data-dels]').forEach(b => b.onclick = async () => { if (!confirm('Xoá series? Các tập vẫn giữ lại.')) return; await api('/api/series?name=' + encodeURIComponent(b.dataset.dels), { method: 'DELETE' }); pgLibrary(); });
   P.querySelectorAll('[data-mv]').forEach(s => s.onchange = async () => { await api(`/api/p/${s.dataset.mv}/series`, { method: 'POST', body: { series: s.value } }); pgLibrary(); });
 }
@@ -366,8 +370,13 @@ function renderDetail(e) {
         <div class="runbar" style="margin-top:12px"><button class="btn2 pri" id="rsubgo">Tạo phụ đề</button><span class="st" id="rsubst"></span></div>
         <p class="small muted">Cần video đã có giọng đọc. Mỗi ngôn ngữ 1 lần gọi model nhỏ. Muốn lồng tiếng: Trình sửa cảnh → Cài đặt video → Tạo bản dịch.</p></div>
       <div class="card"><div class="cap">Gói đăng</div><div class="row"><select id="rplat">${Object.keys(META.platforms || {}).map(p => `<option>${p}</option>`).join('')}</select><button class="btn2 pri" style="flex:none" id="rpubgo">Viết gói đăng</button></div><div class="st small muted" id="rpubst" style="margin-top:8px"></div><div id="rpub"></div></div>
+      ${full || draft ? `<div class="card"><div class="cap">🎨 Thumbnail thu hút</div><p class="small muted" style="margin:0 0 10px">Tự ghép khung hình trong video với chữ to + dải màu theo đúng tông của video — thay cho 1 khung hình trần.</p>
+        <input id="rthumbtext" placeholder="Chữ nổi bật (để trống thì dùng chữ ở ô 'Chữ trên thumbnail' hoặc tiêu đề video)" style="width:100%;margin-bottom:8px">
+        <div class="row"><button class="btn2 pri" id="rthumbpro">🎨 Tạo thumbnail</button><span class="st small muted" id="rthumbprost"></span></div>
+        <div id="rthumbprev" style="margin-top:10px"></div></div>` : ''}
     </div>`;
   const pubBox = p => { const box = (lab, val) => val ? `<label>${lab}</label><div class="copy"><textarea rows="${Math.min(8, String(val).split('\n').length + 1)}" readonly>${esc(val)}</textarea><button class="btn2" onclick="navigator.clipboard.writeText(this.previousElementSibling.value);toast('Đã chép')">Chép</button></div>` : '';
+    if (p.thumbnail_text && $('#rthumbtext') && !$('#rthumbtext').value) $('#rthumbtext').value = p.thumbnail_text;
     return box('Tiêu đề', p.title) + box('Tiêu đề khác', (p.alt_titles || []).join('\n')) + box('Mô tả', [p.description, (p.chapters || []).join('\n'), (p.hashtags || []).join(' ')].filter(Boolean).join('\n\n')) + box('Tag', (p.tags || []).join(', ')) + box('Chữ trên thumbnail', p.thumbnail_text) + box('Bình luận ghim', p.pinned_comment); };
   const slug = p => p.replace(/ /g, '_').toLowerCase();
   const loadPub = async () => {
@@ -387,6 +396,14 @@ function renderDetail(e) {
     const v = $('#rvideo'), at = v.currentTime || 1.5;
     await fetch(`/api/p/${e.id}/thumb?at=${at.toFixed(2)}`);
     toast('Đã cập nhật ảnh đại diện'); pgRender(e.id);
+  };
+  if ($('#rthumbpro')) $('#rthumbpro').onclick = async () => {
+    const r = await api(`/api/p/${e.id}/thumb_pro`, { method: 'POST', body: { text: $('#rthumbtext').value || undefined } });
+    watch(r.job, $('#rthumbprost'), 'Đang ghép thumbnail', j => {
+      if (j.code !== 0) return;
+      $('#rthumbprev').innerHTML = `<img src="${j.result.thumb}" style="max-width:260px;border-radius:10px;box-shadow:0 10px 30px #0003">`;
+      toast('Đã tạo thumbnail mới');
+    });
   };
   $('#rplat').onchange = loadPub;
   $('#rpubgo').onclick = async () => {

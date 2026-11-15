@@ -114,6 +114,62 @@ def thumbnail(pid: str, at: float | None = None) -> Path | None:
     return t if t.exists() else None
 
 
+def thumbnail_pro(pid: str, text: str | None = None, badge: str | None = None, at: float | None = None) -> Path:
+    """Thumbnail 'xịn' để thu hút click: khung hình nét từ video + chữ to + dải màu, đúng tông màu/font của style
+    video (không chỉ 1 khung hình trần như thumbnail()). Ghi đè build/thumb.jpg, luôn là ảnh đại diện mới nhất."""
+    import base64
+    from .visual.html import browser
+
+    d, data = manifest.load(pid)
+    vids = sorted((d / "out").glob("*.mp4")) if (d / "out").exists() else []
+    if not vids:
+        raise RuntimeError("Chưa có video đã xuất để lấy khung hình. Xuất video trước.")
+    scenes = data.get("scenes", [])
+    dur = sum(s.get("duration", 0) for s in scenes) or 10
+    if at is not None:
+        frame_at = at
+    else:
+        # ưu tiên lấy giữa 1 cảnh có nhân vật diễn (bắt mắt hơn nền trống/chữ), bỏ qua cảnh đầu (hay là tiêu đề/mở bài)
+        t0, pick = 0.0, None
+        for s in scenes:
+            sd = s.get("duration", 0)
+            if pick is None and s.get("template_name") == "stickman_stage" and t0 > 0.3:
+                pick = t0 + sd * 0.5
+            t0 += sd
+        frame_at = pick if pick is not None else max(1.0, dur * 0.3)
+    raw = d / "build" / "_thumb_raw.jpg"
+    raw.parent.mkdir(parents=True, exist_ok=True)
+    # cắt bỏ ~30% phía dưới khung hình: đó là vùng phụ đề đã in sẵn vào video (karaoke), giữ lại sẽ đè chữ rối lên thumbnail
+    run([ffmpeg(), "-y", "-v", "error", "-ss", f"{frame_at:.2f}", "-i", vids[0], "-frames:v", "1",
+         "-vf", "scale=960:-2,crop=in_w:in_h*0.72:0:0", raw])
+    b64 = base64.b64encode(raw.read_bytes()).decode()
+    raw.unlink(missing_ok=True)
+
+    aspect = data.get("aspect_ratio", "9:16")
+    W, H = (720, 1280) if aspect == "9:16" else (1080, 1080) if aspect == "1:1" else (1280, 720)
+    st = config.style(data.get("style", "classic_light"))
+    accent = st.get("accent", ["#ff3b30"])
+    title = (text or data.get("thumbnail_text") or data.get("title") or pid.replace("_", " ")).strip()
+    title = " ".join(title.split()[:8])  # thumbnail chỉ cần vài từ ấn tượng, không phải cả câu
+    info = {"bg": f"data:image/jpeg;base64,{b64}", "title": title, "badge": badge,
+            "a1": accent[0] if accent else "#ff3b30", "a2": accent[1] if len(accent) > 1 else "",
+            "a3": accent[2] if len(accent) > 2 else "", "ink": st.get("ink", "#111"),
+            "title_font": st.get("title_font", "Arial Black, sans-serif"),
+            "font_size": 11 if len(title) < 18 else 8.5 if len(title) < 32 else 6.5}
+
+    b = browser()
+    page = b.new_page(viewport={"width": W, "height": H}, device_scale_factor=1)
+    try:
+        page.add_init_script(f"window.THUMB_INPUT = {json.dumps(info, ensure_ascii=False)}")
+        page.goto((config.TEMPLATES / "thumbnail.html").resolve().as_uri())
+        page.wait_for_function("window.__thumbReady === true")
+        out = d / "build" / "thumb.jpg"
+        page.screenshot(path=out, type="jpeg", quality=88)
+    finally:
+        page.close()
+    return {"thumb": f"/files/{pid}/build/thumb.jpg?{int(out.stat().st_mtime)}"}
+
+
 # ---------------------------------------------------------------- trang chủ
 _checks_cache: dict = {}
 

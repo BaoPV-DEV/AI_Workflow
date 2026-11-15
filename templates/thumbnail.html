@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<!-- Thumbnail tổng hợp: khung hình từ video + chữ to + dải màu nhấn, theo đúng màu/font của style video.
+     Render tĩnh 1 lần bằng Playwright (không cần runtime.js/VF.scene, không animation). -->
+<html><head><meta charset="utf-8"><style>
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+  .frame { position: relative; width: 100vw; height: 100vh; background: #000; }
+  .bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(.94) saturate(1.1) contrast(1.05); }
+  .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 38%, rgba(0,0,0,.78) 100%); }
+  .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 1.4%; background: linear-gradient(90deg, var(--a1), var(--a2, var(--a1)), var(--a3, var(--a1))); }
+  .badge { position: absolute; top: 5%; left: 5%; background: var(--a1); color: #fff; font-family: var(--tf); font-weight: 900;
+    padding: .6em 1.2em; border-radius: 999px; font-size: 3.1vw; box-shadow: 0 1vw 2.4vw rgba(0,0,0,.4); letter-spacing: .01em; }
+  .title { position: absolute; left: 5.5%; right: 5.5%; bottom: 7%; font-family: var(--tf); font-weight: 900; color: #fff;
+    font-size: var(--fs); line-height: 1.05; margin: 0;
+    -webkit-text-stroke: .055em var(--ink); paint-order: stroke fill;
+    text-shadow: 0 .5vw 1.6vw rgba(0,0,0,.55); }
+</style></head><body>
+  <div class="frame" id="root">
+    <img class="bg" id="bg">
+    <div class="shade"></div>
+    <div class="bar"></div>
+    <div class="badge" id="badge" style="display:none"></div>
+    <p class="title" id="title"></p>
+  </div>
+<script>
+  const d = window.THUMB_INPUT || {};
+  const root = document.getElementById('root');
+  root.style.setProperty('--a1', d.a1 || '#ff3b30'); root.style.setProperty('--a2', d.a2 || ''); root.style.setProperty('--a3', d.a3 || '');
+  root.style.setProperty('--ink', d.ink || '#111'); root.style.setProperty('--tf', d.title_font || 'Arial Black, sans-serif');
+  root.style.setProperty('--fs', (d.font_size || 9) + 'vw');
+  document.getElementById('bg').src = d.bg || '';
+  document.getElementById('title').textContent = d.title || '';
+  if (d.badge) { const b = document.getElementById('badge'); b.textContent = d.badge; b.style.display = 'inline-block'; }
+  window.__thumbReady = true;
+</script>
+</body></html>
