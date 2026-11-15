@@ -72,9 +72,10 @@ def cmd_prompt(a):
 
 def cmd_new(a):
     from engine.agent.director import plan
-    d, errs, llm = plan(a.topic, project_id=a.id, **_plan_kw(a))
+    from engine.agent.llm import backend
+    print(f"🧠 Bộ não: {backend()}", flush=True)
+    d, errs = plan(a.topic, project_id=a.id, **_plan_kw(a))
     print(f"✔ Project: {d}")
-    print("📊 " + llm.usage.line())
     if errs:
         print("⚠ Còn lỗi:\n  " + "\n  ".join(errs))
     else:
@@ -126,9 +127,13 @@ def cmd_edit(a):
 
 def cmd_translate(a):
     from engine.agent.director import translate
+    from engine import pipeline
     for lang in a.to.split(","):
         d = translate(a.project, lang.strip())
-        print(f"✔ {lang}: {d}")
+        print(f"✔ {lang}: {d.name}")
+        if a.render:
+            pipeline.voice(d)
+            pipeline.render(d)
 
 
 def cmd_voice(a):
@@ -177,6 +182,90 @@ def cmd_usage(a):
     print(f"{len(rows)} lần gọi · vào {tot['in']:,} · ra {tot['out']:,} · cache đọc {tot['cache_read']:,} · cache ghi {tot['cache_write']:,}")
 
 
+def cmd_trends(a):
+    from engine import trends
+    t = trends.collect(a.geo, a.lang, fresh=a.fresh)
+    print(f"Lấy lúc {t['fetched']} · {len(t['items'])} mục" + (f" · lỗi: {t['errors']}" if t["errors"] else ""))
+    print(trends.compact(t["items"], a.limit))
+
+
+def cmd_ideas(a):
+    from engine.agent.director import ideas
+    res = ideas(a.geo, a.lang, a.count, a.genre, a.niche or "", a.fresh)
+    for i in res.get("ideas", []):
+        print(f"\n[{i.get('score')}/10 · {i.get('risk')} · {i.get('genre')}] {i['topic']}")
+        for k in ("title", "hook", "angle", "why_now"):
+            if i.get(k):
+                print(f"   {k}: {i[k]}")
+    print(f"\nLàm video: vf new \"<topic>\" --genre <genre>   hoặc   vf auto --topics \"<topic>\"")
+
+
+def cmd_auto(a):
+    from engine import auto
+    auto.run(a.geo, a.lang, a.count, a.genre, [x.strip() for x in (a.langs or "").split(",") if x.strip()],
+             a.seconds, a.style, a.aspect, a.niche or "", not a.no_render, a.draft,
+             [x.strip() for x in a.topics.split("|")] if a.topics else None)
+
+
+def cmd_mcp_install(a):
+    """Đăng ký MCP server vào Claude Desktop (Windows / macOS)."""
+    import os
+    from pathlib import Path
+    from engine import config
+    entry = {"command": sys.executable, "args": [str(config.ROOT / "mcp_server.py")],
+             "env": {"PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}}
+    cands = []
+    if sys.platform == "win32":
+        cands.append(Path(os.environ.get("APPDATA", "")) / "Claude" / "claude_desktop_config.json")
+        pk = Path(os.environ.get("LOCALAPPDATA", "")) / "Packages"
+        if pk.exists():  # bản Claude cài từ Microsoft Store
+            cands += [p / "LocalCache" / "Roaming" / "Claude" / "claude_desktop_config.json" for p in pk.glob("Claude_*")]
+    elif sys.platform == "darwin":
+        cands.append(Path.home() / "Library/Application Support/Claude/claude_desktop_config.json")
+    else:
+        cands.append(Path.home() / ".config/Claude/claude_desktop_config.json")
+    done = []
+    for f in cands:
+        if not f.parent.exists() and f != cands[0]:
+            continue
+        f.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            cfg = json.loads(f.read_text(encoding="utf-8-sig")) if f.exists() else {}
+        except json.JSONDecodeError:
+            print(f"✘ {f} không phải JSON hợp lệ, bỏ qua (sửa tay rồi chạy lại)")
+            continue
+        cfg.setdefault("mcpServers", {})["ai-workflow"] = entry
+        f.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+        done.append(str(f))
+    for f in done:
+        print(f"✔ Đã thêm 'ai-workflow' vào {f}")
+    print("→ Thoát hẳn Claude Desktop (cả biểu tượng ở khay hệ thống) rồi mở lại. Chat: \"Tìm chủ đề hot và làm 1 video\".")
+
+
+def cmd_brain(a):
+    from engine.agent.llm import backend, claude_cli
+    import os
+    be = backend()
+    print(f"Bộ não đang dùng: {be}")
+    print(f"  API key: {'có' if os.environ.get('ANTHROPIC_API_KEY') else 'không'} · Claude Code: {claude_cli() or 'chưa cài'}")
+    if be == "manual":
+        from engine.agent.llm import MANUAL_HELP
+        print(MANUAL_HELP)
+
+
+def cmd_schedule(a):
+    """Tạo lịch chạy tự động mỗi ngày (Windows Task Scheduler)."""
+    from engine import config
+    if sys.platform != "win32":
+        print(f"Thêm vào crontab: 0 7 * * * cd {config.ROOT} && {sys.executable} vf.py auto {a.args}")
+        return
+    import subprocess
+    tr = f'cmd /c cd /d "{config.ROOT}" && "{sys.executable}" vf.py auto {a.args} >> workspace\\_auto\\log.txt 2>&1'
+    r = subprocess.run(["schtasks", "/Create", "/F", "/SC", "DAILY", "/TN", "AI Workflow Auto", "/TR", tr, "/ST", a.time],
+                       capture_output=True, text=True)
+    print(r.stdout or r.stderr)
+
+
 def cmd_studio(a):
     from web.server import serve
     serve(a.port, open_browser=not a.no_open)
@@ -205,7 +294,7 @@ def main(argv=None):
     s = add("check", cmd_check, "kiểm tra manifest"); s.add_argument("project")
     s = add("show", cmd_show, "in manifest gọn (ít token)"); s.add_argument("project"); s.add_argument("--scene"); s.add_argument("--full", action="store_true")
     s = add("edit", cmd_edit, "sửa video bằng lời (agent, model rẻ)"); s.add_argument("project"); s.add_argument("instruction")
-    s = add("translate", cmd_translate, "dịch sang ngôn ngữ khác (project mới)"); s.add_argument("project"); s.add_argument("--to", required=True)
+    s = add("translate", cmd_translate, "dịch sang ngôn ngữ khác (project mới)"); s.add_argument("project"); s.add_argument("--to", required=True); s.add_argument("--render", action="store_true")
     for name, fn, h in [("voice", cmd_voice, "tạo giọng + mốc từ"), ("preview", cmd_preview, "ảnh tĩnh mỗi cảnh + _sheet.jpg"),
                         ("visuals", cmd_visuals, "chỉ quay hình các cảnh"), ("render", cmd_render, "ghép video cuối"),
                         ("all", cmd_all, "voice + visuals + render")]:
@@ -219,6 +308,24 @@ def main(argv=None):
         s.add_argument("--no-captions", action="store_true")
     add("list", cmd_list, "liệt kê project")
     add("usage", cmd_usage, "tổng token đã dùng")
+    for name, fn, h in [("trends", cmd_trends, "xem chủ đề đang thịnh hành"), ("ideas", cmd_ideas, "AI lọc xu hướng thành ý tưởng video"),
+                        ("auto", cmd_auto, "tự động: xu hướng → kịch bản → giọng → video")]:
+        s = add(name, fn, h)
+        s.add_argument("--geo", default="VN", help="quốc gia Google Trends: VN, US, JP…")
+        s.add_argument("--lang", default="vi", help="ngôn ngữ video / Wikipedia")
+        s.add_argument("--fresh", action="store_true")
+        s.add_argument("--limit", type=int, default=40)
+        s.add_argument("--count", type=int, default=6 if name == "ideas" else 2)
+        s.add_argument("--genre", choices=["animation", "motion_graphic", "news", "explainer"])
+        s.add_argument("--niche", help="chủ đề kênh, vd 'khoa học đời sống'")
+        s.add_argument("--langs", help="thêm bản ngôn ngữ khác, vd en,ja")
+        s.add_argument("--seconds", type=int, default=45)
+        s.add_argument("--style"); s.add_argument("--aspect", choices=["9:16", "16:9", "1:1"])
+        s.add_argument("--topics", help="bỏ qua xu hướng, làm các chủ đề này (ngăn cách bằng |)")
+        s.add_argument("--no-render", action="store_true"); s.add_argument("--draft", action="store_true")
+    add("mcp-install", cmd_mcp_install, "đăng ký vào Claude Desktop (dùng tài khoản Claude, không cần API)")
+    add("brain", cmd_brain, "xem AI đang dùng: API / Claude Code / thủ công")
+    s = add("schedule", cmd_schedule, "chạy vf auto mỗi ngày"); s.add_argument("--time", default="07:13"); s.add_argument("args", nargs="?", default="--count 2")
     s = add("studio", cmd_studio, "mở Web Studio"); s.add_argument("--port", type=int, default=8765); s.add_argument("--no-open", action="store_true")
     a = p.parse_args(argv)
     try:

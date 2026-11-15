@@ -106,11 +106,13 @@
     if (!cap) return;
     const w = input.words, i = wordAt(t);
     if (i < 0 || t > w[w.length - 1].end + 0.4) { if (cap.last) { cap.box.innerHTML = ''; cap.last = ''; } return; }
-    const g0 = Math.floor(i / cap.n) * cap.n, grp = w.slice(g0, g0 + cap.n);
+    const gr = (cap.c.groups || []).find(([a, b]) => i >= a && i < b) || [Math.floor(i / cap.n) * cap.n, Math.floor(i / cap.n) * cap.n + cap.n];
+    const g0 = gr[0], grp = w.slice(gr[0], gr[1]);
     const key = g0 + ':' + i;
     if (key === cap.last) return;
     cap.last = key;
-    cap.box.innerHTML = grp.map((x, k) => g0 + k === i ? `<span style="color:${cap.c.highlight || '#ffd400'}">${x.word}</span>` : x.word).join(' ');
+    const esc = s => String(s).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
+    cap.box.innerHTML = grp.map((x, k) => g0 + k === i ? `<span style="color:${cap.c.highlight || '#ffd400'}">${esc(x.word)}</span>` : esc(x.word)).join(cap.c.joiner ?? ' ');
   }
 
   function seek(t) {

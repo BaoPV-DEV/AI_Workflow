@@ -122,6 +122,18 @@ $lnk.IconLocation = "$env:SystemRoot\System32\imageres.dll,18"
 $lnk.Save()
 Ok "Da tao shortcut 'AI Workflow Studio' tren Desktop"
 
+# Ket noi Claude Desktop (neu co) de chat "lam video ve ..." bang tai khoan Claude
+$cd1 = Join-Path $env:APPDATA "Claude"
+$cd2 = Get-ChildItem (Join-Path $env:LOCALAPPDATA "Packages") -Directory -Filter "Claude_*" -ErrorAction SilentlyContinue
+if ((Test-Path $cd1) -or $cd2) {
+    & $VenvPy vf.py mcp-install
+    Ok "Da ket noi Claude Desktop (thoat han va mo lai Claude Desktop de dung)"
+} else {
+    Warn "Chua thay Claude Desktop. Cai Claude Desktop roi chay: $Dir\vf.bat mcp-install"
+}
+if (Get-Command claude -ErrorAction SilentlyContinue) { Ok "Claude Code: co (Studio se tu viet kich ban bang goi Claude cua ban)" }
+else { Warn "Tuy chon (goi Pro/Max): cai Claude Code de Studio tu viet kich ban: irm https://claude.ai/install.ps1 | iex" }
+
 # video mau de thu ngay
 $demo = Join-Path $Dir "workspace\meo_thich_hop"
 if (-not (Test-Path $demo)) { Copy-Item (Join-Path $Dir "examples\meo_thich_hop") $demo -Recurse }

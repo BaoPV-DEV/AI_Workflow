@@ -6,13 +6,18 @@ from functools import lru_cache
 from pathlib import Path
 
 
-def words_of(text: str) -> list[str]:
-    return [w for w in re.split(r"\s+", text.strip()) if w]
+def words_of(text: str, lang: str | None = None) -> list[str]:
+    ws = [w for w in re.split(r"\s+", text.strip()) if w]
+    if lang and len(ws) <= 2 and len(text) > 8:
+        from . import config
+        if config.language(lang).get("nospace"):  # ja/zh/th: cắt theo dấu câu, tối đa ~6 ký tự
+            return re.findall(r"[^\s、。，！？,.!?]{1,6}[、。，！？,.!?]?", text)
+    return ws
 
 
-def estimate(text: str, duration: float, lead: float = 0.05) -> list[dict]:
+def estimate(text: str, duration: float, lead: float = 0.05, lang: str | None = None) -> list[dict]:
     """Chia thời lượng theo số ký tự mỗi từ (+ nghỉ ở dấu câu). Đủ tốt cho phụ đề cụm."""
-    ws = words_of(text)
+    ws = words_of(text, lang)
     if not ws:
         return []
     weights = [len(w) + (3 if re.search(r"[.,!?;:…]$", w) else 0) + 1 for w in ws]
@@ -55,7 +60,7 @@ def align(audio: Path, text: str, duration: float, lang: str, engine: str = "aut
         w = whisper(audio, text, lang, model)
         if w:
             return w, "whisper"
-    return estimate(text, duration), "estimate"
+    return estimate(text, duration, lang=lang), "estimate"
 
 
 def resolve_at(at, timings: list[dict], duration: float, default: float = 0.0) -> float:

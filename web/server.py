@@ -55,6 +55,30 @@ def status(d: Path, data: dict) -> dict:
             "mtime": mt(d / manifest.MANIFEST)}
 
 
+def run_fn(fn, *args, **kw) -> str:
+    """Chạy hàm Python trong luồng nền, lưu kết quả JSON vào job (cho ý tưởng AI…)."""
+    jid = uuid.uuid4().hex[:8]
+    job = JOBS[jid] = {"cmd": fn.__name__, "log": "", "done": False, "code": None, "result": None}
+
+    def go():
+        try:
+            job["result"] = fn(*args, **kw)
+            job["code"] = 0
+        except Exception as e:
+            job["log"] += f"✘ {e}\n"
+            job["code"] = 1
+        job["done"] = True
+
+    threading.Thread(target=go, daemon=True).start()
+    return jid
+
+
+def brain() -> dict:
+    import os
+    from engine.agent.llm import backend, claude_cli
+    return {"backend": backend(), "api_key": bool(os.environ.get("ANTHROPIC_API_KEY")), "cli": claude_cli() or ""}
+
+
 def scene_input(pid: str, sid: str) -> dict:
     """Giống engine.visual.html.scene_input nhưng dùng được cả khi chưa có giọng đọc."""
     d, data = manifest.load(pid)
@@ -137,7 +161,8 @@ class H(SimpleHTTPRequestHandler):
                                    "actions": {k: v.get("label", k) for k, v in acts["actions"].items()},
                                    "characters": config.library("characters")["characters"],
                                    "moods": MOODS, "moves": MOVES, "holds": HOLDS,
-                                   "voices": config.settings().get("tts", {}).get("voices", {})})
+                                   "voices": config.settings().get("tts", {}).get("voices", {}),
+                                   "languages": config.library("languages")["languages"], "brain": brain()})
             if u == "/api/projects":
                 out = []
                 for m in sorted(config.workspace().glob("*/" + manifest.MANIFEST), key=lambda p: -p.stat().st_mtime):
@@ -155,6 +180,13 @@ class H(SimpleHTTPRequestHandler):
                 return self._json({k: {kk: v[kk] for kk in ("cmd", "done", "code")} for k, v in JOBS.items()})
             if u.startswith("/api/jobs/"):
                 return self._json(JOBS.get(u.split("/")[-1], {"error": "không có job"}))
+            if u == "/api/trends":
+                from urllib.parse import parse_qs
+                from engine import trends
+                q = {k: v[0] for k, v in parse_qs(urlparse(self.path).query).items()}
+                return self._json(trends.collect(q.get("geo", "VN"), q.get("lang", "vi"), fresh=q.get("fresh") == "1"))
+            if u == "/api/brain":
+                return self._json(brain())
             if u == "/api/usage":
                 p = config.workspace() / ".usage.jsonl"
                 rows = [json.loads(x) for x in p.read_text(encoding="utf-8").splitlines()] if p.exists() else []
@@ -191,13 +223,30 @@ class H(SimpleHTTPRequestHandler):
             if u.startswith("/api/p/") and u.endswith("/ask"):
                 return self._json({"job": run_job(["edit", u.split("/")[3], b["text"]])})
             if u.startswith("/api/p/") and u.endswith("/translate"):
-                return self._json({"job": run_job(["translate", u.split("/")[3], "--to", b["to"]])})
+                return self._json({"job": run_job(["translate", u.split("/")[3], "--to", b["to"], *(["--render"] if b.get("render") else [])])})
             if u == "/api/new":
                 args = ["new", b["topic"], "--genre", b.get("genre", "animation"), "--seconds", str(b.get("seconds", 45))]
                 for k in ("style", "aspect", "lang"):
                     if b.get(k):
                         args += [f"--{k}", b[k]]
                 return self._json({"job": run_job(args)})
+            if u == "/api/ideas":
+                from engine.agent.director import ideas
+                return self._json({"job": run_fn(ideas, b.get("geo", "VN"), b.get("lang", "vi"), int(b.get("count", 6)),
+                                                 b.get("genre") or None, b.get("niche", ""))})
+            if u == "/api/auto":
+                args = ["auto", "--geo", b.get("geo", "VN"), "--lang", b.get("lang", "vi"), "--count", str(b.get("count", 1)),
+                        "--seconds", str(b.get("seconds", 45))]
+                for k in ("genre", "langs", "style", "aspect", "niche", "topics"):
+                    if b.get(k):
+                        args += [f"--{k}", str(b[k])]
+                if b.get("draft"):
+                    args.append("--draft")
+                return self._json({"job": run_job(args)})
+            if u == "/api/mcp-install":
+                r = subprocess.run([sys.executable, str(config.ROOT / "vf.py"), "mcp-install"], capture_output=True, text=True,
+                                   encoding="utf-8", errors="replace", cwd=config.ROOT)
+                return self._json({"ok": r.returncode == 0, "log": r.stdout + r.stderr})
             if u == "/api/prompt":
                 from engine.agent.director import manual_prompt
                 return self._json({"prompt": manual_prompt(b["topic"], genre=b.get("genre", "animation"), style=b.get("style") or None,

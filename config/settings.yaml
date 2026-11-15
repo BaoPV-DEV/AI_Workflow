@@ -8,8 +8,8 @@ default_lang: vi
 default_style: classic_light      # tên file trong config/styles/
 
 tts:
-  engine: edge                    # edge | piper | kokoro | silent
-  voices:                         # giọng mặc định theo ngôn ngữ (edge-tts)
+  engine: auto                    # auto (edge-tts, lỗi thì gTTS) | edge | gtts | piper | kokoro | silent
+  voices:                         # ghi đè giọng mặc định theo ngôn ngữ; danh sách đầy đủ: library/languages.json
     vi: vi-VN-HoaiMyNeural
     en: en-US-AndrewNeural
   rate: "+0%"

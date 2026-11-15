@@ -3,6 +3,28 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from . import config
+
+
+def layout(words: list[dict], lang: str, max_words: int = 4) -> dict:
+    """Chia từ thành cụm phụ đề. Ngôn ngữ không có dấu cách (ja, zh, th) chia theo số ký tự."""
+    nospace = bool(config.language(lang).get("nospace"))
+    limit = 12 if nospace else max(14, max_words * 7)
+    groups, start, length = [], 0, 0
+    for i, w in enumerate(words):
+        n = len(w["word"])
+        too_many = (not nospace and i - start >= max_words) or (length + n > limit and i > start)
+        if too_many:
+            groups.append([start, i])
+            start, length = i, 0
+        length += n + (0 if nospace else 1)
+        if not nospace and w["word"][-1:] in ".!?…" and i + 1 - start >= 2:
+            groups.append([start, i + 1])
+            start, length = i + 1, 0
+    if start < len(words):
+        groups.append([start, len(words)])
+    return {"groups": groups, "joiner": "" if nospace else " "}
+
 
 def _ts(t: float) -> str:
     t = max(0.0, t)
@@ -16,7 +38,8 @@ def _ass_color(hex_: str) -> str:
     return f"&H00{b}{g}{r}".upper()
 
 
-def build_ass(scenes: list[dict], offsets: list[float], width: int, height: int, cap: dict, chunk: int = 4) -> str:
+def build_ass(scenes: list[dict], offsets: list[float], width: int, height: int, cap: dict, chunk: int = 4,
+              lang: str = "vi") -> str:
     font = cap.get("font", "Arial")
     size = int(cap.get("size", 0.045) * height) if cap.get("size", 0.045) < 1 else int(cap["size"])
     color, hi, outline = cap.get("color", "#FFFFFF"), cap.get("highlight", "#FFD400"), cap.get("outline", "#000000")
@@ -41,25 +64,27 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             continue  # cảnh tự hiển thị chữ theo giọng đọc
         if cap.get("upper"):
             words = [{**w, "word": w["word"].upper()} for w in words]
-        for i in range(0, len(words), chunk):
-            grp = words[i:i + chunk]
+        lay = layout(words, lang, chunk)
+        for a, b in lay["groups"]:
+            grp = words[a:b]
             for j, w in enumerate(grp):
                 start = off + w["start"]
                 end = off + (grp[j + 1]["start"] if j + 1 < len(grp) else w["end"] + 0.15)
-                txt = " ".join(("{\\c" + _ass_color(hi) + "}" + g["word"] + "{\\c" + _ass_color(color) + "}") if k == j
+                txt = lay["joiner"].join(("{\\c" + _ass_color(hi) + "}" + g["word"] + "{\\c" + _ass_color(color) + "}") if k == j
                                else g["word"] for k, g in enumerate(grp))
                 lines.append(f"Dialogue: 0,{_ts(start)},{_ts(end)},Cap,,0,0,0,,{txt}")
     return header + "\n".join(lines) + "\n"
 
 
-def build_srt(scenes: list[dict], offsets: list[float], chunk: int = 7) -> str:
+def build_srt(scenes: list[dict], offsets: list[float], chunk: int = 7, lang: str = "vi") -> str:
     out, n = [], 1
     f = lambda t: f"{int(t // 3600):02d}:{int(t % 3600 // 60):02d}:{int(t % 60):02d},{int(t * 1000 % 1000):03d}"
     for sc, off in zip(scenes, offsets):
         words = sc.get("word_timings") or []
-        for i in range(0, len(words), chunk):
-            g = words[i:i + chunk]
-            out.append(f"{n}\n{f(off + g[0]['start'])} --> {f(off + g[-1]['end'])}\n{' '.join(w['word'] for w in g)}\n")
+        lay = layout(words, lang, chunk)
+        for a, b in lay["groups"]:
+            g = words[a:b]
+            out.append(f"{n}\n{f(off + g[0]['start'])} --> {f(off + g[-1]['end'])}\n{lay['joiner'].join(w['word'] for w in g)}\n")
             n += 1
     return "\n".join(out)
 

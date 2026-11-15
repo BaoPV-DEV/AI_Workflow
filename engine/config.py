@@ -59,3 +59,20 @@ def resolution(manifest: dict) -> tuple[int, int]:
         w, h = manifest["resolution"].split("x")
         return int(w), int(h)
     return ASPECTS[manifest.get("aspect_ratio") or settings().get("default_aspect", "9:16")]
+
+
+def language(lang: str | None) -> dict:
+    """Thông tin ngôn ngữ (giọng edge, mã gTTS, nospace). Nhận 'vi', 'en-GB', 'ja-JP'..."""
+    langs = library("languages")["languages"]
+    lang = (lang or settings().get("default_lang", "vi")).strip()
+    for key in (lang, lang.split("-")[0].lower()):
+        if key in langs:
+            return {"code": key, **langs[key]}
+    return {"code": lang, "name": lang, "gtts": lang.split("-")[0].lower(), "voices": {}}
+
+
+def default_voice(lang: str | None) -> str:
+    """Giọng mặc định: settings.tts.voices[lang] nếu có, không thì giọng đầu tiên trong languages.json."""
+    info = language(lang)
+    custom = settings().get("tts", {}).get("voices", {})
+    return custom.get(info["code"]) or next(iter(info["voices"]), "")

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from dataclasses import dataclass, field
 
@@ -112,3 +113,144 @@ class LLM:
                                 "in": u.input_tokens, "out": u.output_tokens,
                                 "cache_read": getattr(u, "cache_read_input_tokens", 0),
                                 "cache_write": getattr(u, "cache_creation_input_tokens", 0)}) + "\n")
+
+
+# ======================================================================
+#  Chọn "bộ não": API key  |  Claude Code (gói Pro/Max)  |  thủ công
+# ======================================================================
+import shutil
+import subprocess
+
+CLI_ALIAS = {"plan": "sonnet", "edit": "haiku", "translate": "haiku", "ideas": "sonnet"}
+
+
+class NoBackend(RuntimeError):
+    pass
+
+
+def claude_cli() -> str | None:
+    exe = shutil.which("claude")
+    if exe:
+        return exe
+    import os
+    for p in (os.path.expanduser("~/.local/bin/claude.exe"), os.path.expanduser("~/.local/bin/claude")):
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def backend() -> str:
+    """api (ANTHROPIC_API_KEY) | cli (Claude Code đăng nhập bằng tài khoản Claude) | manual."""
+    import os
+    want = config.settings().get("agent", {}).get("backend", "auto")
+    if want != "auto":
+        return want
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return "api"
+    if claude_cli():
+        return "cli"
+    return "manual"
+
+
+MANUAL_HELP = ("Chưa có bộ não AI để gọi tự động. Chọn một trong các cách:\n"
+               "  1) Claude Desktop: chạy `vf mcp-install`, mở lại Claude Desktop và chat \"làm video về ...\"\n"
+               "  2) Claude Code (gói Pro/Max): cài bằng `irm https://claude.ai/install.ps1 | iex`, chạy `claude` để đăng nhập\n"
+               "  3) Không cài gì: `vf prompt \"chủ đề\"` → dán vào claude.ai → `vf import`\n"
+               "  4) API key: đặt ANTHROPIC_API_KEY")
+
+
+def _extract_json(text: str):
+    m = re.search(r"```(?:json)?\s*([\[{].*[\]}])\s*```", text, re.S)
+    if m:
+        text = m.group(1)
+    else:
+        a = min([i for i in (text.find("{"), text.find("[")) if i >= 0], default=-1)
+        b = max(text.rfind("}"), text.rfind("]"))
+        if a < 0 or b < a:
+            raise ValueError("Không thấy JSON trong câu trả lời")
+        text = text[a:b + 1]
+    return json.loads(text)
+
+
+def run_cli(prompt: str, role: str = "plan", tools: str = "", cwd: str | None = None,
+            permission: str | None = None, timeout: int = 900, system_extra: str = "") -> dict:
+    """Gọi Claude Code ở chế độ không giao diện; prompt đi qua stdin (tránh giới hạn độ dài dòng lệnh)."""
+    exe = claude_cli()
+    if not exe:
+        raise NoBackend(MANUAL_HELP)
+    a = config.settings().get("agent", {})
+    model = a.get("cli_models", {}).get(role) or CLI_ALIAS.get(role, "sonnet")
+    cmd = [exe, "-p", "Làm đúng theo yêu cầu trong nội dung được cung cấp qua stdin.",
+           "--output-format", "json", "--model", model]
+    if tools:
+        cmd += ["--allowedTools", tools]
+    else:
+        cmd += ["--disallowedTools", "Bash,Edit,Write,NotebookEdit"]
+    if permission:
+        cmd += ["--permission-mode", permission]
+    if system_extra:
+        cmd += ["--append-system-prompt", system_extra]
+    r = subprocess.run(cmd, input=prompt, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                       cwd=cwd or str(config.ROOT), timeout=timeout)
+    try:
+        out = json.loads(r.stdout)
+    except json.JSONDecodeError:
+        raise RuntimeError(f"Claude Code lỗi (mã {r.returncode}): {(r.stderr or r.stdout)[-600:]}\n"
+                           "Đã đăng nhập chưa? Mở PowerShell, gõ `claude` một lần để đăng nhập.")
+    if out.get("is_error"):
+        raise RuntimeError(f"Claude Code báo lỗi: {str(out.get('result'))[:600]}")
+    _log_cli(out, model)
+    return out
+
+
+def _log_cli(out: dict, model: str) -> None:
+    path = config.workspace() / ".usage.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    u = out.get("usage") or {}
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps({"ts": time.strftime("%Y-%m-%d %H:%M:%S"), "model": f"cli:{model}",
+                            "in": u.get("input_tokens", 0), "out": u.get("output_tokens", 0),
+                            "cache_read": u.get("cache_read_input_tokens", 0),
+                            "cache_write": u.get("cache_creation_input_tokens", 0)}) + "\n")
+
+
+def complete_json(role: str, system: list[str], user: str, schema: dict, name: str = "submit",
+                  web: bool = False, repair=None, tries: int = 3):
+    """Một lần hỏi → JSON theo schema, qua API (ép công cụ) hoặc Claude Code CLI.
+    repair(data) -> list lỗi; nếu có lỗi sẽ hỏi lại kèm danh sách lỗi."""
+    be = backend()
+    if be == "manual":
+        raise NoBackend(MANUAL_HELP)
+    if be == "api":
+        llm = LLM(role)
+        sys_blocks = llm.cached_system(*system)
+        tool = {"name": name, "description": "Nộp kết quả", "input_schema": schema}
+        msgs = [{"role": "user", "content": user}]
+        data = None
+        for _ in range(tries):
+            resp = llm.call(sys_blocks, msgs, tools=[tool], tool_choice={"type": "tool", "name": name})
+            use = next(b for b in resp.content if b.type == "tool_use")
+            data = use.input
+            errs = repair(data) if repair else []
+            if not errs:
+                break
+            msgs += [{"role": "assistant", "content": [b.model_dump(exclude_none=True) for b in resp.content]},
+                     {"role": "user", "content": [{"type": "tool_result", "tool_use_id": use.id, "is_error": True,
+                                                   "content": "Sửa các lỗi sau rồi nộp lại toàn bộ:\n" + "\n".join(errs[:15])}]}]
+        print("📊 " + llm.usage.line(), flush=True)
+        return data
+    # ---- cli
+    base = ("\n\n".join(s for s in system if s) + "\n\n" + user +
+            "\n\nTRẢ LỜI: chỉ một khối ```json hợp lệ theo JSON Schema sau, không thêm lời nào khác:\n" +
+            json.dumps(schema, ensure_ascii=False))
+    prompt, data = base, None
+    for _ in range(tries):
+        out = run_cli(prompt, role, tools="WebSearch,WebFetch" if web else "")
+        data = _extract_json(out.get("result", ""))
+        errs = repair(data) if repair else []
+        if not errs:
+            break
+        prompt = base + "\n\nLẦN TRƯỚC BẠN TRẢ VỀ:\n```json\n" + json.dumps(data, ensure_ascii=False) + \
+            "\n```\nLỖI CẦN SỬA:\n" + "\n".join(errs[:15]) + "\nHãy trả lại TOÀN BỘ JSON đã sửa."
+    print(f"📊 Claude Code ({out.get('num_turns', 1)} lượt, {out.get('duration_ms', 0) / 1000:.0f}s)", flush=True)
+    return data

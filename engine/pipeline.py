@@ -58,7 +58,8 @@ def voice(project, only=None, force=False) -> dict:
     c = _ctx(data)
     t = c["settings"]["tts"]
     eng = t.get("engine", "edge")
-    voice_name = data.get("voice") or t.get("voices", {}).get(c["lang"], "")
+    voice_name = data.get("voice") or config.default_voice(c["lang"])
+    used = {}
     cache = Cache(d)
     pad = c["settings"]["render"].get("scene_pad", 0.25)
     for s in _scenes(data, only):
@@ -68,20 +69,26 @@ def voice(project, only=None, force=False) -> dict:
         h = digest(text, eng, voice_name, t.get("rate"))
         if force or not cache.fresh("tts:" + key, h, wav) or not s.get("word_timings"):
             log(f"  🎙  {key}: {text[:50]}")
-            _, tw = tts.synth(text, wav, eng, voice_name, t.get("rate", "+0%"), t.get("piper_model", ""))
+            _, tw, got = tts.synth(text, wav, eng, voice_name, t.get("rate", "+0%"), t.get("piper_model", ""), c["lang"])
             speech = probe_duration(wav)
             a = c["settings"]["align"]
             s["word_timings"], how = align.align(wav, text, speech, c["lang"], a.get("engine", "auto"),
                                                  a.get("whisper_model", "base"), tw)
             s["speech"] = round(speech, 3)
-            log(f"      {speech:.2f}s, mốc từ: {how}")
+            s["tts"] = got
+            used[got] = used.get(got, 0) + 1
+            log(f"      {speech:.2f}s · giọng: {got}{' (dự phòng)' if eng == 'auto' and got != 'edge' else ''} · mốc từ: {how}")
             cache.put("tts:" + key, h)
         speech = s.get("speech") or probe_duration(wav)
         s["audio_path"] = f"assets/{key}.wav"
         s["duration"] = round(max(speech + pad + float(s.get("pause", 0)), float(s.get("min_duration", 0)), 1.0), 3)
     manifest.save(d, data)
     total = sum(s.get("duration", 0) for s in data["scenes"])
-    log(f"✔ Giọng đọc xong: {len(data['scenes'])} cảnh, tổng {total:.1f}s")
+    log(f"✔ Giọng đọc xong: {len(data['scenes'])} cảnh, tổng {total:.1f}s · {c['lang']} · {voice_name}")
+    if used.get("silent") and eng != "silent":
+        log("⚠ Có cảnh không có lời đọc (voice_text trống) nên im lặng.")
+    if eng == "silent":
+        log("⚠ tts.engine = silent: video sẽ KHÔNG có tiếng. Xoá dòng này trong config/settings.local.yaml để có giọng.")
     return data
 
 
@@ -108,7 +115,7 @@ def caption_mode(c: dict) -> str:
     return mode
 
 
-def _jobs(d: Path, data: dict, c: dict, draft: bool, only):
+def _jobs(d: Path, data: dict, c: dict, draft: bool, only, estimate: bool = False):
     r = c["settings"]["render"]
     cmode = caption_mode(c)
     enc = pick_encoder(r.get("encoder", "auto"))
@@ -117,11 +124,16 @@ def _jobs(d: Path, data: dict, c: dict, draft: bool, only):
     clips.mkdir(parents=True, exist_ok=True)
     for s in _scenes(data, only):
         if "duration" not in s:
-            raise RuntimeError("Chưa có thời lượng: chạy 'vf voice' trước")
+            if not estimate:
+                raise RuntimeError("Chưa có thời lượng: chạy 'vf voice' trước")
+            n = len(align.words_of(s.get("voice_text") or "", c["lang"]))
+            s = {**s, "duration": max(2.5, n / 2.5 + 0.3)}
+            s["word_timings"] = align.estimate(s.get("voice_text") or "", s["duration"] - 0.3, lang=c["lang"])
         key = manifest.scene_key(s)
         sc = {**s, "acting_resolved": resolve_acting(s, cast)}
         if cmode == "html" and s.get("captions") is not False and s.get("template_name") != "kinetic_text":
-            sc["_captions"] = {**c["style"].get("captions", {}), "chunk": r.get("caption_words", 4)}
+            sc["_captions"] = {**c["style"].get("captions", {}), "chunk": r.get("caption_words", 4),
+                               **captions.layout(s.get("word_timings") or [], c["lang"], r.get("caption_words", 4))}
         job = Job(scene=sc, project_dir=d, out=clips / f"{key}.mp4", width=c["w"], height=c["h"], fps=c["fps"],
                   duration=s["duration"], style=c["style"], cast=cast, encoder=enc, crf=r.get("crf", 20),
                   preset=r.get("preset", "veryfast"), draft=draft)
@@ -192,13 +204,13 @@ def render(project, draft=False, captions_on=None) -> Path:
     out_dir.mkdir(exist_ok=True)
     pid = data["project_id"]
     w, h = (c["w"] // 2, c["h"] // 2) if draft else (c["w"], c["h"])
-    captions.write(out_dir / f"{pid}.srt", captions.build_srt(data["scenes"], offsets))
+    captions.write(out_dir / f"{pid}.srt", captions.build_srt(data["scenes"], offsets, lang=c["lang"]))
     vf = []
     cap_on = r.get("captions", True) if captions_on is None else captions_on
     if cap_on and caption_mode(c) == "ass":
         ass = captions.write(build / "captions.ass",
                              captions.build_ass(data["scenes"], offsets, w, h, c["style"].get("captions", {}),
-                                                r.get("caption_words", 4)))
+                                                r.get("caption_words", 4), c["lang"]))
         vf.append(f"ass='{_ff_path(ass)}'")
     music = data.get("music") or r.get("music")
     inputs, afilter = [joined], "[0:a]loudnorm=I=-14:TP=-1.5:LRA=11[a]"
@@ -239,7 +251,7 @@ def preview(project, at=0.62, only=None) -> Path:
     pv = d / "preview"
     pv.mkdir(exist_ok=True)
     stills = []
-    for key, job in _jobs(d, data, c, True, only):
+    for key, job in _jobs(d, data, c, True, only, estimate=True):
         out = pv / f"{key}.jpg"
         vt = job.scene["visual_type"]
         if vt in ("html_animation", "svg_graphic"):

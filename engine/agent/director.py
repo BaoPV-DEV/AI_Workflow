@@ -84,35 +84,48 @@ def import_manifest(text: str, project_id: str | None = None) -> tuple[Path, lis
     return d, manifest.validate(data)
 
 
-def plan(topic: str, genre: str = "animation", project_id: str | None = None, **kw) -> tuple[Path, list[str], LLM]:
-    llm = LLM("plan")
+def plan(topic: str, genre: str = "animation", project_id: str | None = None, **kw) -> tuple[Path, list[str]]:
+    """Chủ đề -> manifest. Bộ não: API key hoặc Claude Code (tài khoản Claude), tự sửa lỗi tối đa 2 lần."""
+    from .llm import complete_json
+
+    facts = kw.pop("facts", None)
     static, user = build_prompt(topic, genre=genre, **kw)
-    system = llm.cached_system(*static)
-    tool = {"name": "submit_manifest", "description": "Nộp project_manifest.json hoàn chỉnh.",
-            "input_schema": authored_schema()}
-    msgs = [{"role": "user", "content": user}]
-    choice = {"type": "tool", "name": "submit_manifest"}
-    data, errs = None, []
-    for _ in range(3):  # 1 lần + tối đa 2 lần tự sửa
-        resp = llm.call(system, msgs, tools=[tool], tool_choice=choice)
-        use = next(b for b in resp.content if b.type == "tool_use")
-        data = use.input
+    if facts:
+        user += f"- Sự thật cần kiểm chứng trước khi viết (tra web nếu có thể): {facts}\n"
+
+    def fill(data):
         data.setdefault("lang", kw.get("lang") or config.settings().get("default_lang"))
         data.setdefault("aspect_ratio", kw.get("aspect") or config.settings().get("default_aspect"))
         if kw.get("style"):
             data.setdefault("style", kw["style"])
-        errs = manifest.validate({**data, "project_id": slugify(data.get("project_id") or "x")})
-        if not errs:
-            break
-        msgs += [{"role": "assistant", "content": [b.model_dump(exclude_none=True) for b in resp.content]},
-                 {"role": "user", "content": [{"type": "tool_result", "tool_use_id": use.id, "is_error": True,
-                                               "content": "Sửa các lỗi sau rồi nộp lại toàn bộ:\n" + "\n".join(errs[:15])}]}]
+        return data
+
+    def check(data):
+        return manifest.validate({**fill(data), "project_id": slugify(data.get("project_id") or "x")})
+
+    data = complete_json("plan", static, user, authored_schema(), "submit_manifest", web=True, repair=check)
+    fill(data)
+    errs = check(data)
     d = new_project(data, project_id or slugify(topic))
-    return d, errs, llm
+    return d, errs
 
 
 def edit(project, instruction: str, on_event=None) -> str:
+    from .llm import backend, run_cli, NoBackend, MANUAL_HELP
+
     d = manifest.project_dir(project)
+    be = backend()
+    if be == "cli":  # Claude Code tự sửa file theo CLAUDE.md của repo
+        rel = d.relative_to(config.ROOT).as_posix() if d.is_relative_to(config.ROOT) else str(d)
+        out = run_cli(f"Project video: {d.name} (file {rel}/project_manifest.json).\nYêu cầu: {instruction}\n"
+                      f"Làm theo CLAUDE.md: xem bằng `python vf.py show {d.name}`, chỉ sửa đúng cảnh cần sửa, "
+                      f"xong chạy `python vf.py check {d.name}`. Trả lời 1 câu ngắn.",
+                      "edit", tools="Read,Edit,Bash(python vf.py:*)", permission="acceptEdits")
+        msg = out.get("result", "")
+        (on_event or print)("🤖 " + msg)
+        return msg
+    if be != "api":
+        raise NoBackend(MANUAL_HELP)
     llm = LLM("edit")
     system = llm.cached_system(
         "Bạn sửa project_manifest.json của một video theo yêu cầu. Dùng công cụ; chỉ chạm vào cảnh cần sửa; "
@@ -126,26 +139,31 @@ TEXT_KEYS = ("heading", "subheading", "kicker", "title", "label", "sub", "quote"
              "ticker", "source", "items", "events", "bars", "left", "right", "say", "text", "emphasize", "vs")
 
 
-def translate(project, to_lang: str) -> Path:
+def translate(project, to_lang: str, texts: list[dict] | None = None) -> Path:
+    """Tạo bản dịch thành project mới <id>_<lang>. texts có sẵn (vd do Claude Desktop dịch) thì không gọi AI."""
     src, data = manifest.load(project)
-    llm = LLM("translate")
     payload = []
     for s in data["scenes"]:
         props = {k: v for k, v in (s.get("props") or {}).items() if k in TEXT_KEYS}
         says = [b.get("say") for b in s.get("acting") or []]
         payload.append({"id": s["scene_id"], "voice_text": s.get("voice_text", ""), "props": props,
                         **({"says": says} if any(says) else {})})
-    tool = {"name": "submit", "description": "Bản dịch",
-            "input_schema": {"type": "object", "required": ["scenes"], "properties": {"scenes": {"type": "array", "items": {"type": "object"}}}}}
-    system = llm.cached_system(
-        "Dịch lời đọc và chữ trên màn hình của video. Giữ nguyên cấu trúc JSON và id. Lời đọc tự nhiên khi đọc to, "
-        "độ dài tương đương bản gốc; chữ trên màn hình ngắn gọn. Không dịch tên riêng/thương hiệu. Trả qua công cụ submit.")
-    resp = llm.call(system, [{"role": "user", "content": f"Ngôn ngữ đích: {to_lang}\n" + json.dumps(payload, ensure_ascii=False)}],
-                    tools=[tool], tool_choice={"type": "tool", "name": "submit"})
-    out = next(b for b in resp.content if b.type == "tool_use").input["scenes"]
-    by_id = {str(x.get("id")): x for x in out}
+    if texts is None:
+        from .llm import complete_json
+        info = config.language(to_lang)
+        schema = {"type": "object", "required": ["scenes"], "properties": {"scenes": {"type": "array", "items": {
+            "type": "object", "required": ["id", "voice_text"],
+            "properties": {"id": {"type": ["integer", "string"]}, "voice_text": {"type": "string"},
+                           "props": {"type": "object"}, "says": {"type": "array"}}}}}}
+        system = ["Dịch lời đọc và chữ trên màn hình của video. Giữ nguyên cấu trúc JSON và id. Lời đọc tự nhiên khi "
+                  "đọc to, độ dài tương đương bản gốc (cùng thời lượng); chữ trên màn hình ngắn gọn. Số viết bằng chữ "
+                  "khi cần đọc đúng. Không dịch tên riêng/thương hiệu. Không thêm bớt ý."]
+        user = f"Ngôn ngữ đích: {info['name']} ({to_lang})\n" + json.dumps(payload, ensure_ascii=False)
+        texts = complete_json("translate", system, user, schema, "submit")["scenes"]
+    by_id = {str(x.get("id")): x for x in texts}
     new = manifest.strip_engine_fields(data)
     for s in new["scenes"]:
+        s.pop("speech", None); s.pop("tts", None)
         tr = by_id.get(str(s["scene_id"]))
         if not tr:
             continue
@@ -154,21 +172,48 @@ def translate(project, to_lang: str) -> Path:
         for b, say in zip(s.get("acting") or [], tr.get("says") or []):
             if say:
                 b["say"] = say
+        for b in s.get("acting") or []:  # mốc theo từ không còn trong bản dịch -> đổi sang %
             if isinstance(b.get("at"), str) and not b["at"].endswith("%"):
-                b["at"] = f"{round(_pct(b['at'], data, s), 0):.0f}%"  # từ gốc không còn trong bản dịch
-    new["lang"] = to_lang
+                b["at"] = f"{round(_pct(b['at'], data, s)):.0f}%"
+        for k in ("at",):
+            v = s.get("props", {}).get(k)
+            if isinstance(v, str) and not v.endswith("%"):
+                s["props"][k] = f"{round(_pct(v, data, s)):.0f}%"
+            if isinstance(v, list):
+                s["props"][k] = [x if not isinstance(x, str) or x.endswith("%") else f"{round(_pct(x, data, s)):.0f}%" for x in v]
+        for it in s.get("props", {}).get("items", []) if isinstance(s.get("props", {}).get("items"), list) else []:
+            if isinstance(it, dict) and isinstance(it.get("at"), str) and not it["at"].endswith("%"):
+                it["at"] = f"{round(_pct(it['at'], data, s)):.0f}%"
+    code = config.language(to_lang)["code"]
+    new["lang"] = code
     new.pop("voice", None)
-    dst = config.workspace() / f"{src.name}_{to_lang}"
-    if dst.exists():
-        shutil.rmtree(dst / "build", ignore_errors=True)
+    dst = config.workspace() / f"{src.name}_{code.replace('-', '_').lower()}"
+    shutil.rmtree(dst / "build", ignore_errors=True)
     (dst / "assets").mkdir(parents=True, exist_ok=True)
     for f in (src / "assets").glob("*"):
-        if f.is_file() and not f.name.startswith("s0") and not f.suffix == ".wav":
+        if f.is_file() and f.suffix != ".wav":
             shutil.copy2(f, dst / "assets" / f.name)
     new["project_id"] = dst.name
+    if new.get("title"):
+        new["title"] = f"{new['title']} ({code})"
     manifest.save(dst, new)
-    print("📊 " + llm.usage.line())
     return dst
+
+
+def ideas(geo: str = "VN", lang: str = "vi", count: int = 6, genre: str | None = None, niche: str = "",
+          fresh: bool = False) -> dict:
+    """Xu hướng -> ý tưởng video đã lọc & chấm điểm."""
+    from .. import trends
+    from .llm import complete_json
+
+    t = trends.collect(geo, lang, fresh=fresh)
+    if not t["items"]:
+        raise RuntimeError("Không lấy được xu hướng nào: " + "; ".join(f"{k}: {v}" for k, v in t["errors"].items()))
+    system, user = trends.ideas_prompt(trends.compact(t["items"]), count, lang, genre, niche)
+    res = complete_json("ideas", [system], user, trends.IDEA_SCHEMA, "submit_ideas")
+    res["fetched"] = t["fetched"]
+    res["errors"] = t["errors"]
+    return res
 
 
 def _pct(at: str, data: dict, scene: dict) -> float:

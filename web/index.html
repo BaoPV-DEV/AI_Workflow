@@ -143,6 +143,23 @@ dialog::backdrop { background: #1c233066; }
 .plist .p:hover { background: var(--soft); }
 .plist .p img, .plist .p .ph { width: 44px; height: 56px; object-fit: cover; border-radius: 4px; background: var(--desk); flex: none; }
 .plist .p .t { font-weight: 600; } .plist .p.on { background: var(--pri-soft); }
+.brainchip { font-size: 12.5px; padding: 4px 10px; border-radius: 20px; }
+.brainchip.ok { border-color: #bfe5d3; background: #effaf5; color: #136b48; }
+.brainchip.no { border-color: #f3d29a; background: #fff7e8; color: #8a5a00; }
+.trend { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+.trend:hover { background: var(--soft); border-color: var(--line); }
+.trend .t { font-weight: 600; } .trend .src { font-size: 11.5px; color: var(--mute); text-align: right; }
+.trend .ctx { grid-column: 1 / -1; font-size: 12.5px; color: var(--mute); }
+.idea { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin: 8px 0; }
+.idea h4 { margin: 0 0 4px; font-size: 15px; }
+.idea .sc { float: right; font-weight: 700; color: var(--pri); }
+.idea .risk-medium { color: #8a5a00; } .idea .risk-high { color: var(--err); }
+.langs { display: flex; flex-wrap: wrap; gap: 6px; }
+.langs label { margin: 0; font-weight: 500; display: flex; gap: 5px; align-items: center; border: 1px solid var(--line); border-radius: 20px; padding: 3px 10px; }
+.langs input { width: auto; }
+.way { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 10px 0; }
+.way h4 { margin: 0 0 4px; }
+code.cmd { display: block; background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font: 12.5px var(--mono); margin: 6px 0; word-break: break-all; }
 .cast { display: grid; grid-template-columns: 1.1fr 1.2fr 46px 30px; gap: 6px; align-items: center; margin-bottom: 6px; }
 .cast input[type=color] { padding: 2px; height: 34px; }
 #logbox { position: fixed; right: 14px; top: 64px; width: 460px; max-height: 60vh; background: #1f242d; color: #d7dce5; border-radius: 10px; box-shadow: 0 20px 50px #0006; z-index: 30; display: flex; flex-direction: column; }
@@ -163,6 +180,7 @@ kbd { font: 11px var(--mono); border: 1px solid #4a5363; border-bottom-width: 2p
 <body>
 <header>
   <div class="brand"><i></i>AI Workflow</div>
+  <button class="brainchip" id="brainchip" onclick="openBrain()" title="AI viết kịch bản, gợi ý ý tưởng, dịch">AI: …</button>
   <button class="ghost" onclick="openProjects()" title="Danh sách video">Video của tôi</button>
   <input id="ptitle" placeholder="Tên video" oninput="change(m => m.title = this.value, 'title')" hidden>
   <nav class="steps" id="steps" hidden></nav>
@@ -216,7 +234,24 @@ kbd { font: 11px var(--mono); border: 1px solid #4a5363; border-bottom-width: 2p
 
 <!-- tạo video -->
 <dialog id="dlgNew"><div class="dhead"><h3>Tạo video mới</h3><button class="ghost" onclick="dlgNew.close()">Đóng</button></div>
-  <div class="dbody">
+  <div class="tabs" style="margin:0;padding:0 14px" role="tablist"><button class="tab on" data-nt="topic" onclick="newTab('topic')">Tự nhập chủ đề</button><button class="tab" data-nt="hot" onclick="newTab('hot')">Chủ đề đang hot</button></div>
+  <div class="dbody" id="ntHot" hidden>
+    <div class="row" style="margin-top:12px">
+      <select id="tgeo" aria-label="Quốc gia"></select>
+      <button style="flex:none" onclick="loadTrends(true)">Tải lại</button>
+      <button class="pri" style="flex:none" onclick="aiIdeas()">AI chọn ý tưởng</button>
+    </div>
+    <p class="hint" id="trendInfo">Nguồn: Google Trends, Wikipedia, Hacker News. Bấm một chủ đề để dùng, hoặc để AI lọc và biến thành ý tưởng video an toàn, dễ giải thích.</p>
+    <div id="ideaList"></div>
+    <div id="trendList"></div>
+    <div class="way" style="margin-top:14px"><h4>Tự động làm cả loạt</h4>
+      <p class="hint" style="margin:0 0 8px">AI chọn ý tưởng tốt nhất, viết kịch bản, tạo giọng và xuất video. Cần Claude Code hoặc API key.</p>
+      <div class="row" style="align-items:flex-start"><div style="flex:0 0 110px"><label for="acount" style="margin-top:0">Số video</label><input id="acount" type="number" min="1" max="10" value="2"></div>
+      <div><label style="margin-top:0">Thêm bản ngôn ngữ</label><div class="langs" id="alangs"></div></div></div>
+      <div class="row" style="margin-top:10px"><label class="check" style="margin:0"><input type="checkbox" id="adraft"> Chỉ xuất bản nháp (nhanh)</label><button class="pri" style="flex:none" onclick="runAuto()">Bắt đầu tự động</button></div>
+    </div>
+  </div>
+  <div class="dbody" id="ntTopic">
     <label for="ntopic">Chủ đề</label>
     <textarea id="ntopic" rows="3" placeholder="Ví dụ: Vì sao người Việt mê cà phê sữa đá"></textarea>
     <label>Thể loại</label>
@@ -224,6 +259,7 @@ kbd { font: 11px var(--mono); border: 1px solid #4a5363; border-bottom-width: 2p
     <label>Phong cách</label>
     <div class="swatches" id="nstyle"></div>
     <div class="row">
+      <div><label for="nlang">Ngôn ngữ video</label><select id="nlang"></select></div>
       <div><label>Khung hình</label><div class="seg" id="naspect"></div></div>
       <div><label for="nsec">Độ dài: <span id="nsecv">45</span> giây</label><input id="nsec" type="range" min="15" max="180" step="5" value="45" oninput="nsecv.textContent=this.value" style="padding:0;border:0;box-shadow:none;accent-color:var(--pri)"></div>
     </div>
@@ -232,9 +268,9 @@ kbd { font: 11px var(--mono); border: 1px solid #4a5363; border-bottom-width: 2p
       <p class="hint" style="margin:0 0 6px">Prompt đã được chép. Mở claude.ai, dán prompt, rồi chép toàn bộ câu trả lời vào đây.</p>
       <textarea id="nimport" class="code" rows="7" placeholder='{"project_id": "...", "scenes": [...]}'></textarea>
     </div>
-    <p class="hint" id="newhint">Có API key thì Studio tự viết kịch bản. Không có thì lấy prompt, dán vào claude.ai và dán kết quả về đây (không tốn phí API).</p>
+    <p class="hint" id="newhint">Đã kết nối Claude Code hoặc API thì Studio tự viết kịch bản. Chưa có thì lấy prompt, dán vào claude.ai và dán kết quả về đây.</p>
   </div>
-  <div class="dfoot"><button onclick="getPrompt()" id="btnPrompt">Lấy prompt cho claude.ai</button><button onclick="importJson()" id="btnImport" hidden>Nhập kịch bản</button><button class="pri" onclick="newApi()">Viết kịch bản bằng API</button></div></dialog>
+  <div class="dfoot"><button onclick="getPrompt()" id="btnPrompt">Lấy prompt cho claude.ai</button><button onclick="importJson()" id="btnImport" hidden>Nhập kịch bản</button><button class="pri" onclick="newApi()" id="btnNewAi">Để AI viết kịch bản</button></div></dialog>
 
 <!-- cài đặt video -->
 <dialog id="dlgSettings"><div class="dhead"><h3>Cài đặt video</h3><button class="ghost" onclick="dlgSettings.close()">Xong</button></div>
@@ -242,19 +278,37 @@ kbd { font: 11px var(--mono); border: 1px solid #4a5363; border-bottom-width: 2p
     <label>Phong cách</label><div class="swatches" id="sstyle"></div>
     <div class="row">
       <div><label>Khung hình</label><div class="seg" id="saspect"></div></div>
-      <div><label for="slang">Ngôn ngữ lời đọc</label><input id="slang" oninput="change(m => m.lang = this.value || undefined, 'lang')"></div>
+      <div><label for="slang">Ngôn ngữ lời đọc</label><select id="slang"></select></div>
     </div>
     <div class="row">
-      <div><label for="svoice">Giọng đọc (edge-tts)</label><input id="svoice" placeholder="mặc định theo ngôn ngữ" oninput="change(m => m.voice = this.value || undefined, 'voice')"></div>
+      <div><label for="svoice">Giọng đọc</label><select id="svoice"></select></div>
       <div><label for="smusic">Nhạc nền (file trong assets)</label><input id="smusic" placeholder="vd nhac.mp3" oninput="change(m => m.music = this.value || undefined, 'music')"></div>
     </div>
     <label>Nhân vật</label>
     <p class="hint" style="margin:0 0 8px">Tên, mẫu nhân vật và màu áo. Dùng trong tab Diễn xuất của cảnh người que.</p>
     <div id="castlist"></div>
     <button onclick="addCast()">Thêm nhân vật</button>
-    <label for="trlang">Dịch sang ngôn ngữ khác</label>
-    <div class="row"><input id="trlang" placeholder="vd en,ja"><button style="flex:none" onclick="translateTo()">Tạo bản dịch</button></div>
-    <p class="hint">Bản dịch là một video mới, giữ nguyên hình và diễn xuất. Cần API key.</p>
+    <label>Làm thêm bản ngôn ngữ khác</label>
+    <div class="langs" id="trlangs"></div>
+    <div class="row" style="margin-top:10px"><label class="check" style="margin:0"><input type="checkbox" id="trrender" checked> Tạo giọng và xuất video luôn</label><button style="flex:none" onclick="translateTo()">Tạo bản dịch</button></div>
+    <p class="hint">Mỗi bản dịch là một video mới, giữ nguyên hình và diễn xuất, giọng đọc đúng ngôn ngữ. Cần AI đã kết nối (hoặc nhờ Claude Desktop dịch).</p>
+  </div></dialog>
+
+<!-- kết nối AI -->
+<dialog id="dlgBrain"><div class="dhead"><h3>Kết nối AI bằng tài khoản Claude</h3><button class="ghost" onclick="dlgBrain.close()">Đóng</button></div>
+  <div class="dbody">
+    <p id="brainNow" class="hint"></p>
+    <div class="way"><h4>Claude Desktop (mọi gói, kể cả miễn phí)</h4>
+      <p class="hint" style="margin:0">Chat trong Claude Desktop: "Tìm chủ đề hot và làm 1 video 45 giây". Claude viết kịch bản, dịch; máy bạn tạo giọng và video.</p>
+      <div class="row" style="margin-top:8px"><button class="pri" style="flex:none" onclick="mcpInstall()">Kết nối Claude Desktop</button><span class="hint" id="mcpMsg">Sau khi bấm: thoát hẳn Claude Desktop rồi mở lại.</span></div></div>
+    <div class="way"><h4>Claude Code (gói Pro, Max, Team)</h4>
+      <p class="hint" style="margin:0">Để Studio tự viết kịch bản, gợi ý ý tưởng, dịch và chạy tự động bằng gói Claude của bạn. Cài trong PowerShell:</p>
+      <code class="cmd">irm https://claude.ai/install.ps1 | iex</code>
+      <p class="hint" style="margin:0">Sau đó gõ <b>claude</b> một lần để đăng nhập, rồi mở lại Studio.</p></div>
+    <div class="way"><h4>Không cài gì thêm</h4>
+      <p class="hint" style="margin:0">Trong "Tạo video mới", bấm "Lấy prompt cho claude.ai", dán vào claude.ai và dán kết quả về.</p></div>
+    <div class="way"><h4>API key (trả theo token)</h4>
+      <p class="hint" style="margin:0">Đặt biến môi trường ANTHROPIC_API_KEY rồi mở lại Studio.</p></div>
   </div></dialog>
 
 <!-- video đã xuất -->
@@ -288,8 +342,29 @@ let playing = false, auto = true, muted = false, t = 0, clock0 = 0, raf, frameTp
 let job = null;
 
 /* ================= khởi động ================= */
+const BRAIN_NAME = { api: 'API key', cli: 'Claude Code', manual: 'chưa kết nối' };
+const GEOS = { VN: 'Việt Nam', US: 'Mỹ', GB: 'Anh', JP: 'Nhật Bản', KR: 'Hàn Quốc', TH: 'Thái Lan', ID: 'Indonesia', IN: 'Ấn Độ', BR: 'Brazil', DE: 'Đức', FR: 'Pháp', ES: 'Tây Ban Nha', MX: 'Mexico', RU: 'Nga', TW: 'Đài Loan' };
+const langOptions = (cur) => Object.entries(META.languages).map(([k, v]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${esc(v.name)}</option>`).join('');
+const langChecks = (el, skip) => { el.innerHTML = Object.entries(META.languages).filter(([k]) => k !== skip).map(([k, v]) => `<label><input type="checkbox" value="${k}">${esc(v.name)}</label>`).join(''); };
+function renderBrain() {
+  const b = META.brain, chip = $('#brainchip');
+  chip.textContent = 'AI: ' + BRAIN_NAME[b.backend];
+  chip.className = 'brainchip ' + (b.backend === 'manual' ? 'no' : 'ok');
+  $('#btnNewAi').disabled = b.backend === 'manual';
+  $('#btnNewAi').title = b.backend === 'manual' ? 'Chưa kết nối AI: bấm chip "AI" ở góc trái để kết nối' : '';
+}
+function openBrain() {
+  const b = META.brain;
+  $('#brainNow').textContent = b.backend === 'manual' ? 'Hiện chưa có AI tự gọi được. Chọn một cách bên dưới.' : `Đang dùng: ${BRAIN_NAME[b.backend]}${b.cli ? ' (' + b.cli + ')' : ''}.`;
+  dlgBrain.showModal();
+}
+async function mcpInstall() { const r = await api('/api/mcp-install', { method: 'POST', body: {} }); $('#mcpMsg').textContent = r.ok ? 'Đã kết nối. Thoát hẳn Claude Desktop (cả ở khay hệ thống) rồi mở lại.' : 'Lỗi: ' + r.log; }
+
 async function boot() {
   META = await api('/api/meta');
+  renderBrain();
+  $('#tgeo').innerHTML = Object.entries(GEOS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+  $('#tgeo').onchange = () => loadTrends(false);
   $('#addTpl').innerHTML = Object.keys(META.templates).map(k => `<option value="${k}">${esc(TPL_NAMES[k] || k)}</option>`).join('');
   bindKeys();
   new ResizeObserver(fitFrame).observe($('#stage'));
@@ -643,7 +718,7 @@ function toggleAuto() { auto = !auto; $('#btnAuto').classList.toggle('on', auto)
 function toggleMute() { muted = !muted; $('#btnMute').textContent = muted ? 'Tắt tiếng' : 'Có tiếng'; $('#btnMute').classList.toggle('on', !muted); if (muted) stopAudio(); }
 
 /* ================= chạy engine ================= */
-const STEP_NAME = { voice: 'Tạo giọng đọc', preview: 'Tạo ảnh xem trước', draft: 'Xuất bản nháp', all: 'Xuất video', new: 'Viết kịch bản', translate: 'Dịch' };
+const STEP_NAME = { voice: 'Tạo giọng đọc', preview: 'Tạo ảnh xem trước', draft: 'Xuất bản nháp', all: 'Xuất video', new: 'Viết kịch bản', translate: 'Dịch', auto: 'Tự động' };
 async function run(step, extra = {}) {
   if (job && !job.done) return toast('Đang chạy một việc khác, đợi xong đã', true);
   if (ERR.length && step !== 'preview') return toast('Kịch bản còn lỗi: ' + ERR[0], true);
@@ -677,11 +752,12 @@ async function poll() {
   if (ok && (job.step === 'all' || job.step === 'draft')) showOutput(job.step === 'draft' ? PID + '_draft.mp4' : PID + '.mp4');
 }
 function progressOf(step, log) {
+  if (step === 'auto') return /📄 Báo cáo/.test(log) ? 100 : (log.match(/✅/g) || []).length ? 70 : 35;
   if (/✅|🖼|✔ Project/.test(log)) return 100;
   const n = M?.scenes.length || 1, voiced = (log.match(/🎙/g) || []).length;
   const clips = (log.match(/ ✔ (clip|draft):/g) || []).length, todo = +((log.match(/Quay (\d+)\//) || [])[1] ?? 0);
   if (step === 'voice') return voiced / n * 100;
-  if (step === 'preview' || step === 'new' || step === 'translate') return 45;
+  if (step === 'preview' || step === 'new' || step === 'translate' || step === 'auto') return /✅/.test(log) ? 70 : 45;
   const v = step === 'all' ? (/Giọng đọc xong/.test(log) ? 20 : voiced / n * 20) : 0;
   const q = todo ? clips / todo * (step === 'all' ? 70 : 90) : (/Quay 0\//.test(log) ? (step === 'all' ? 70 : 90) : 0);
   return v + q;
@@ -707,14 +783,62 @@ function seg(el, options, current, onPick) {
   el.innerHTML = Object.entries(options).map(([k, n]) => `<button class="${k === current ? 'on' : ''}" data-k="${k}">${esc(n)}</button>`).join('');
   el.querySelectorAll('button').forEach(b => b.onclick = () => { el.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); onPick(b.dataset.k); });
 }
+function newTab(k) {
+  document.querySelectorAll('[data-nt]').forEach(b => b.classList.toggle('on', b.dataset.nt === k));
+  $('#ntHot').hidden = k !== 'hot'; $('#ntTopic').hidden = k !== 'topic';
+  document.querySelector('#dlgNew .dfoot').hidden = k !== 'topic';
+  if (k === 'hot' && !$('#trendList').innerHTML) loadTrends(false);
+}
+const geoLang = () => ({ VN: 'vi', JP: 'ja', KR: 'ko', TH: 'th', ID: 'id', BR: 'pt', DE: 'de', FR: 'fr', ES: 'es', MX: 'es', RU: 'ru', TW: 'zh', IN: 'hi' }[$('#tgeo').value] || 'en');
+async function loadTrends(fresh) {
+  $('#trendList').innerHTML = '<p class="hint">Đang tải xu hướng…</p>';
+  const r = await api(`/api/trends?geo=${$('#tgeo').value}&lang=${geoLang()}${fresh ? '&fresh=1' : ''}`);
+  const errs = Object.keys(r.errors || {});
+  $('#trendInfo').textContent = `Lấy lúc ${r.fetched || '—'} · ${r.items?.length || 0} chủ đề` + (errs.length ? ` · không tải được: ${errs.join(', ')}` : '') + '. Bấm một chủ đề để dùng.';
+  const SRC = { google_trends: 'Google Trends', wikipedia: 'Wikipedia', hacker_news: 'Hacker News', youtube: 'YouTube' };
+  $('#trendList').innerHTML = (r.items || []).slice(0, 60).map((t, i) => `<div class="trend" data-i="${i}"><span class="t">${esc(t.title)}</span><span class="src">${SRC[t.source] || t.source}<br>${esc(t.traffic)}</span>${t.context?.length ? `<span class="ctx">${esc(t.context.join(' · '))}</span>` : ''}</div>`).join('') || '<p class="hint">Không có dữ liệu. Kiểm tra internet rồi bấm Tải lại.</p>';
+  $('#trendList').querySelectorAll('.trend').forEach(el => el.onclick = () => { const t = r.items[+el.dataset.i]; useTopic(t.title + (t.context?.length ? ` (bối cảnh: ${t.context[0]})` : '')); });
+}
+function useTopic(topic, genre) {
+  $('#ntopic').value = topic; if (genre) { NEW.genre = genre; seg($('#ngenre'), GENRES, NEW.genre, k => NEW.genre = k); }
+  $('#nlang').value = geoLang() in META.languages ? geoLang() : $('#nlang').value;
+  newTab('topic'); $('#ntopic').focus();
+}
+async function aiIdeas() {
+  if (META.brain.backend === 'manual') return openBrain();
+  $('#ideaList').innerHTML = '<p class="hint">AI đang đọc xu hướng và chọn ý tưởng… (khoảng 30–60 giây)</p>';
+  const r = await api('/api/ideas', { method: 'POST', body: { geo: $('#tgeo').value, lang: geoLang(), count: 6 } });
+  const wait = async () => {
+    const j = await api('/api/jobs/' + r.job);
+    if (!j.done) return setTimeout(wait, 1000);
+    if (j.code !== 0) { $('#ideaList').innerHTML = `<div class="errbox">${esc(j.log)}</div>`; return; }
+    const ideas = j.result.ideas || [];
+    $('#ideaList').innerHTML = '<h4 style="margin:12px 0 0">Ý tưởng AI đề xuất</h4>' + ideas.map((x, i) => `<div class="idea"><span class="sc">${x.score}/10</span><h4>${esc(x.title || x.topic)}</h4>
+      <div class="hint">${esc(GENRES[x.genre] || x.genre)} · <span class="risk-${x.risk}">rủi ro ${({ low: 'thấp', medium: 'vừa', high: 'cao' })[x.risk] || '?'}</span>${x.trend ? ' · từ xu hướng: ' + esc(x.trend) : ''}</div>
+      <p style="margin:6px 0">${esc(x.hook || '')}</p>${x.why_now ? `<div class="hint">${esc(x.why_now)}</div>` : ''}
+      <div class="row" style="margin-top:8px"><span></span><button style="flex:none" data-i="${i}">Làm video này</button></div></div>`).join('');
+    $('#ideaList').querySelectorAll('button[data-i]').forEach(b => b.onclick = () => { const x = ideas[+b.dataset.i]; useTopic(x.topic + (x.hook ? `. Hook: ${x.hook}` : '') + (x.angle ? `. Góc: ${x.angle}` : ''), x.genre); });
+  };
+  wait();
+}
+async function runAuto() {
+  if (META.brain.backend === 'manual') return openBrain();
+  const langs = [...document.querySelectorAll('#alangs input:checked')].map(x => x.value).join(',');
+  dlgNew.close();
+  const r = await api('/api/auto', { method: 'POST', body: { geo: $('#tgeo').value, lang: geoLang(), count: +$('#acount').value, langs, draft: $('#adraft').checked, seconds: +$('#nsec').value, aspect: NEW.aspect } });
+  startJob(r.job, 'auto', async j => { $('#logbox').hidden = false; toast(j.code === 0 ? 'Tự động xong: mở "Video của tôi" để xem' : 'Tự động gặp lỗi, xem nhật ký', j.code !== 0); });
+}
 function openNew() {
+  $('#nlang').innerHTML = langOptions(NEW.lang || 'vi');
+  langChecks($('#alangs'), null);
+  newTab('topic');
   seg($('#ngenre'), GENRES, NEW.genre, k => NEW.genre = k);
   seg($('#naspect'), { '9:16': 'Dọc 9:16', '16:9': 'Ngang 16:9' }, NEW.aspect, k => NEW.aspect = k);
   swatches($('#nstyle'), NEW.style, k => NEW.style = k, true);
   $('#pastebox').hidden = true; $('#btnImport').hidden = true; $('#newhint').hidden = false;
   dlgNew.showModal(); $('#ntopic').focus();
 }
-const newBody = () => ({ topic: $('#ntopic').value.trim(), genre: NEW.genre, style: NEW.style, aspect: NEW.aspect, seconds: +$('#nsec').value });
+const newBody = () => ({ topic: $('#ntopic').value.trim(), genre: NEW.genre, style: NEW.style, aspect: NEW.aspect, seconds: +$('#nsec').value, lang: (NEW.lang = $('#nlang').value) });
 async function newApi() {
   if (!newBody().topic) return $('#ntopic').focus();
   dlgNew.close();
@@ -739,8 +863,13 @@ async function importJson() {
 function openSettings() {
   swatches($('#sstyle'), M.style || 'classic_light', k => { change(m => m.style = k); loadFrame(true); });
   seg($('#saspect'), { '9:16': 'Dọc 9:16', '16:9': 'Ngang 16:9', '1:1': 'Vuông' }, M.aspect_ratio || '9:16', k => { change(m => m.aspect_ratio = k); frameTpl = null; loadFrame(true); });
-  $('#slang').value = M.lang || ''; $('#svoice').value = M.voice || ''; $('#smusic').value = M.music || '';
-  $('#svoice').placeholder = META.voices[M.lang || 'vi'] || 'mặc định theo ngôn ngữ';
+  $('#slang').innerHTML = langOptions(M.lang || 'vi');
+  const fillVoices = () => { const L = META.languages[$('#slang').value] || { voices: {} }; $('#svoice').innerHTML = '<option value="">Mặc định</option>' + Object.entries(L.voices).map(([k, n]) => `<option value="${k}" ${k === M.voice ? 'selected' : ''}>${esc(n)}</option>`).join(''); };
+  fillVoices();
+  $('#slang').onchange = () => { change(m => { m.lang = $('#slang').value; delete m.voice; m.scenes.forEach(invalidate); }); fillVoices(); toast('Đổi ngôn ngữ giọng đọc: nhớ sửa lời đọc sang ngôn ngữ mới, hoặc dùng "Tạo bản dịch"'); };
+  $('#svoice').onchange = () => change(m => { if ($('#svoice').value) m.voice = $('#svoice').value; else delete m.voice; m.scenes.forEach(invalidate); });
+  $('#smusic').value = M.music || '';
+  langChecks($('#trlangs'), M.lang || 'vi');
   renderCast(); dlgSettings.showModal();
 }
 function renderCast() {
@@ -762,9 +891,11 @@ function renderCast() {
 }
 function addCast() { change(m => { m.cast = m.cast || {}; let k = 1; while (m.cast['Nv' + k]) k++; m.cast['Nv' + k] = { preset: 'cozy' }; }); renderCast(); }
 async function translateTo() {
-  const to = $('#trlang').value.trim(); if (!to) return $('#trlang').focus();
+  const to = [...document.querySelectorAll('#trlangs input:checked')].map(x => x.value).join(',');
+  if (!to) return toast('Chọn ít nhất một ngôn ngữ', true);
+  if (META.brain.backend === 'manual') { dlgSettings.close(); return openBrain(); }
   dlgSettings.close(); await save();
-  const r = await api(`/api/p/${PID}/translate`, { method: 'POST', body: { to } });
+  const r = await api(`/api/p/${PID}/translate`, { method: 'POST', body: { to, render: $('#trrender').checked } });
   startJob(r.job, 'translate', j => j.code === 0 && toast('Đã tạo bản dịch. Mở trong "Video của tôi"'));
 }
 

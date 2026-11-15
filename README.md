@@ -18,7 +18,25 @@ Tự cài Python (nếu thiếu), thư viện, ffmpeg đi kèm, dùng Edge có s
 
 Linux/macOS: `pip install -r requirements.txt && python -m playwright install chromium`, rồi `python vf.py studio`.
 
-## Ba cách tạo video
+## Dùng tài khoản Claude (không cần API key)
+
+- **Claude Desktop** (mọi gói): trình cài tự kết nối. Chat "tìm chủ đề hot và làm 1 video 45 giây", Claude điều khiển máy bạn qua MCP.
+- **Claude Code** (Pro/Max): Studio và `vf new / ideas / auto / edit / translate` tự gọi AI bằng gói của bạn.
+
+Chi tiết: [docs/CLAUDE_ACCOUNT.md](docs/CLAUDE_ACCOUNT.md).
+
+## Chủ đề hot, tự động, đa ngôn ngữ
+
+```bat
+vf trends --geo VN                 :: Google Trends + Wikipedia + Hacker News
+vf ideas --geo VN --count 6        :: AI lọc thành ý tưởng video an toàn, có điểm và hook
+vf auto --count 2 --langs en,ja    :: xu hướng → kịch bản → dịch → giọng → video, kèm báo cáo
+vf translate <id> --to en,ko --render
+```
+
+14 ngôn ngữ có giọng sẵn (vi, en, ja, ko, zh, th, id, es, pt, fr, de, hi, ru…). Giọng edge-tts lỗi thì tự chuyển gTTS; lỗi hết thì báo rõ, không ra video câm.
+
+## Các cách tạo video
 
 | Cách | Lệnh | Chi phí |
 |---|---|---|

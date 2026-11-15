@@ -11,19 +11,38 @@ from .util import ffmpeg, run
 SR = 48000
 
 
-def synth(text: str, out_wav: Path, engine: str, voice: str, rate: str = "+0%", piper_model: str = ""):
+class TTSError(RuntimeError):
+    pass
+
+
+def synth(text: str, out_wav: Path, engine: str, voice: str, rate: str = "+0%", piper_model: str = "",
+          lang: str = "vi"):
+    """Trả về (wav, word_timings | None, engine_đã_dùng). engine 'auto' = edge-tts, lỗi thì gTTS.
+    Không bao giờ âm thầm ra file câm: lỗi hết thì báo TTSError (trừ khi chọn 'silent')."""
     out_wav.parent.mkdir(parents=True, exist_ok=True)
     if not text.strip() or engine == "silent":
         secs = max(1.5, len(text.split()) / 2.6)  # ~156 từ/phút
         _silence(out_wav, secs)
-        return out_wav, None
-    if engine == "edge":
-        return _edge(text, out_wav, voice, rate)
-    if engine == "piper":
-        return _piper(text, out_wav, piper_model)
-    if engine == "kokoro":
-        return _kokoro(text, out_wav, voice)
-    raise ValueError(f"TTS engine không hỗ trợ: {engine}")
+        return out_wav, None, "silent"
+    chain = {"auto": ["edge", "gtts"]}.get(engine, [engine])
+    errors = []
+    for eng in chain:
+        try:
+            if eng == "edge":
+                wav, words = _edge(text, out_wav, voice, rate)
+            elif eng == "gtts":
+                wav, words = _gtts(text, out_wav, lang)
+            elif eng == "piper":
+                wav, words = _piper(text, out_wav, piper_model)
+            elif eng == "kokoro":
+                wav, words = _kokoro(text, out_wav, voice)
+            else:
+                raise ValueError(f"TTS engine không hỗ trợ: {eng}")
+            return wav, words, eng
+        except Exception as e:  # thử engine kế tiếp
+            errors.append(f"{eng}: {type(e).__name__}: {str(e)[:200]}")
+    raise TTSError("Không tạo được giọng đọc.\n  " + "\n  ".join(errors) +
+                   "\n  → Kiểm tra internet; cập nhật: pip install -U edge-tts gTTS")
 
 
 def _silence(out: Path, secs: float) -> None:
@@ -56,11 +75,28 @@ def _edge(text: str, out: Path, voice: str, rate: str):
         return bytes(audio), words
 
     audio, words = asyncio.run(go())
+    if len(audio) < 2000:
+        raise RuntimeError(f"edge-tts trả về âm thanh rỗng (giọng '{voice}' có đúng không?)")
     mp3 = out.with_suffix(".mp3")
     mp3.write_bytes(audio)
     _to_wav(mp3, out)
     mp3.unlink(missing_ok=True)
     return out, (words or None)
+
+
+def _gtts(text: str, out: Path, lang: str):
+    """Dự phòng: Google Translate TTS (miễn phí, cần internet, không có mốc từng từ)."""
+    try:
+        from gtts import gTTS
+    except ImportError as e:
+        raise RuntimeError("pip install gTTS") from e
+    from . import config
+
+    mp3 = out.with_suffix(".g.mp3")
+    gTTS(text, lang=config.language(lang)["gtts"]).save(str(mp3))
+    _to_wav(mp3, out)
+    mp3.unlink(missing_ok=True)
+    return out, None
 
 
 def _piper(text: str, out: Path, model: str):
