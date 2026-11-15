@@ -73,6 +73,7 @@ def episode(d: Path, data: dict) -> dict:
             "voiced": all(s.get("duration") for s in scenes) and bool(scenes),
             "rendered": any("_draft" not in v.name for v in vids), "draft": any("_draft" in v.name for v in vids),
             "videos": [v.name for v in vids], "subs": [data.get("lang", "vi")] + subs,
+            "publish": {p.stem.removeprefix("publish_"): p.name for p in out.glob("publish_*.json")} if out.exists() else {},
             "ai": data.get("source") != "narration", "source": data.get("source", "ai"),
             "thumb": f"/files/{d.name}/{thumb.relative_to(d).as_posix()}?{int(thumb.stat().st_mtime)}" if thumb else "",
             "mtime": int((d / manifest.MANIFEST).stat().st_mtime)}
@@ -261,6 +262,12 @@ def tools_dir() -> Path:
     d = _ws() / "_tools"
     d.mkdir(parents=True, exist_ok=True)
     return d
+
+
+def tools_delete(name: str) -> None:
+    f = tools_dir() / Path(name).name  # Path(...).name chặn "../" thoát khỏi thư mục _tools
+    if f.exists():
+        f.unlink()
 
 
 def tool_run(kind: str, src: str, opt: dict) -> str:

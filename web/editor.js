@@ -470,6 +470,13 @@ function bindKeys() {
     else if (e.key === 'Delete') delScene(CUR);
   });
   window.addEventListener('beforeunload', e => { if (/Đang sửa|Đang lưu/.test($('#savestate').textContent)) { save(); e.preventDefault(); } });
+  bindDialogs();
+}
+/* Chặn lỗi "dialog không tắt được": click ra ngoài khung (vào phần nền mờ) để đóng,
+ * và luôn dừng/xoá video khi đóng dialog xem video (kể cả khi đang ở chế độ toàn màn hình). */
+function bindDialogs() {
+  document.querySelectorAll('dialog').forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));
+  dlgOut.addEventListener('close', () => { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); outVideo.pause(); outVideo.removeAttribute('src'); outVideo.load(); });
 }
 let toastT;
 function toast(msg, err) { const el = $('#toast'); el.textContent = msg; el.className = err ? 'err' : ''; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, err ? 6000 : 2600); }

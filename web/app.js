@@ -367,6 +367,15 @@ function renderDetail(e) {
         <p class="small muted">Cần video đã có giọng đọc. Mỗi ngôn ngữ 1 lần gọi model nhỏ. Muốn lồng tiếng: Trình sửa cảnh → Cài đặt video → Tạo bản dịch.</p></div>
       <div class="card"><div class="cap">Gói đăng</div><div class="row"><select id="rplat">${Object.keys(META.platforms || {}).map(p => `<option>${p}</option>`).join('')}</select><button class="btn2 pri" style="flex:none" id="rpubgo">Viết gói đăng</button></div><div class="st small muted" id="rpubst" style="margin-top:8px"></div><div id="rpub"></div></div>
     </div>`;
+  const pubBox = p => { const box = (lab, val) => val ? `<label>${lab}</label><div class="copy"><textarea rows="${Math.min(8, String(val).split('\n').length + 1)}" readonly>${esc(val)}</textarea><button class="btn2" onclick="navigator.clipboard.writeText(this.previousElementSibling.value);toast('Đã chép')">Chép</button></div>` : '';
+    return box('Tiêu đề', p.title) + box('Tiêu đề khác', (p.alt_titles || []).join('\n')) + box('Mô tả', [p.description, (p.chapters || []).join('\n'), (p.hashtags || []).join(' ')].filter(Boolean).join('\n\n')) + box('Tag', (p.tags || []).join(', ')) + box('Chữ trên thumbnail', p.thumbnail_text) + box('Bình luận ghim', p.pinned_comment); };
+  const slug = p => p.replace(/ /g, '_').toLowerCase();
+  const loadPub = async () => {
+    const f = (e.publish || {})[slug($('#rplat').value)];
+    $('#rpub').innerHTML = '';
+    if (f) $('#rpub').innerHTML = pubBox(await (await fetch(`/files/${e.id}/out/${f}`)).json());
+  };
+  loadPub();
   const D = $('#rdetail');
   D.querySelectorAll('[data-step]').forEach(b => b.onclick = async () => {
     const r = await api(`/api/p/${e.id}/run`, { method: 'POST', body: { step: b.dataset.step } });
@@ -374,14 +383,11 @@ function renderDetail(e) {
   });
   const subs = []; bindChips($('#rsubs'), '[data-rs]', () => subs);
   $('#rsubgo').onclick = async () => { if (!subs.length) return toast('Chọn ngôn ngữ', true); if (META.brain.backend === 'manual') return go('settings'); const r = await api(`/api/p/${e.id}/subs`, { method: 'POST', body: { langs: subs } }); watch(r.job, $('#rsubst'), 'Đang dịch phụ đề', j => j.code === 0 && (toast('Đã tạo: ' + j.result.join(', ')), pgRender(e.id))); };
+  $('#rplat').onchange = loadPub;
   $('#rpubgo').onclick = async () => {
     if (META.brain.backend === 'manual') return go('settings');
     const r = await api(`/api/p/${e.id}/publish`, { method: 'POST', body: { platform: $('#rplat').value } });
-    watch(r.job, $('#rpubst'), 'Claude đang viết tiêu đề, mô tả, tag', j => {
-      if (j.code !== 0) return; const p = j.result;
-      const box = (lab, val) => val ? `<label>${lab}</label><div class="copy"><textarea rows="${Math.min(8, String(val).split('\n').length + 1)}" readonly>${esc(val)}</textarea><button class="btn2" onclick="navigator.clipboard.writeText(this.previousElementSibling.value);toast('Đã chép')">Chép</button></div>` : '';
-      $('#rpub').innerHTML = box('Tiêu đề', p.title) + box('Tiêu đề khác', (p.alt_titles || []).join('\n')) + box('Mô tả', [p.description, (p.chapters || []).join('\n'), (p.hashtags || []).join(' ')].filter(Boolean).join('\n\n')) + box('Tag', (p.tags || []).join(', ')) + box('Chữ trên thumbnail', p.thumbnail_text) + box('Bình luận ghim', p.pinned_comment);
-    });
+    watch(r.job, $('#rpubst'), 'Claude đang viết tiêu đề, mô tả, tag', j => { if (j.code === 0) $('#rpub').innerHTML = pubBox(j.result); });
   };
 }
 
@@ -396,7 +402,7 @@ async function pgTools() {
     <p class="lead">Dùng cho video và phụ đề có sẵn: kéo thả file vào, chọn file, bấm công cụ. Kết quả nằm trong <code>workspace/_tools</code>.</p>
     <div class="grid2" style="grid-template-columns:1fr 1.4fr">
       <div class="card"><div class="drop" id="tdrop">⬆ Kéo thả video / .srt vào đây, hoặc bấm để chọn<input type="file" id="tfile" hidden multiple accept="video/*,.srt"></div>
-        <div class="files" style="margin-top:12px">${files.map(f => `<div class="fr ${f.name === TSEL ? 'on' : ''}" data-f="${esc(f.name)}">${isVid(f.name) ? '🎬' : isSrt(f.name) ? '💬' : /\.(jpg|png)$/i.test(f.name) ? '🖼' : '🎵'} <span style="flex:1">${esc(f.name)}</span><span class="small muted">${(f.size / 1048576).toFixed(1)} MB</span><a class="btn2" href="/files/_tools/${encodeURIComponent(f.name)}" download onclick="event.stopPropagation()">⬇</a></div>`).join('') || '<p class="muted small">Chưa có file.</p>'}</div></div>
+        <div class="files" style="margin-top:12px">${files.map(f => `<div class="fr ${f.name === TSEL ? 'on' : ''}" data-f="${esc(f.name)}">${isVid(f.name) ? '🎬' : isSrt(f.name) ? '💬' : /\.(jpg|png)$/i.test(f.name) ? '🖼' : '🎵'} <span style="flex:1">${esc(f.name)}</span><span class="small muted">${(f.size / 1048576).toFixed(1)} MB</span><a class="btn2" href="/files/_tools/${encodeURIComponent(f.name)}" download onclick="event.stopPropagation()">⬇</a><button class="btn2 danger" data-del="${esc(f.name)}" title="Xoá file này" onclick="event.stopPropagation()">✕</button></div>`).join('') || '<p class="muted small">Chưa có file.</p>'}</div></div>
       <div class="card"><div class="cap">Công cụ cho: ${TSEL ? esc(TSEL) : '(chưa chọn file)'}</div><div class="tools">
         <div class="tool"><b>📐 Đổi khung hình</b><p>Video ngang ↔ dọc, nền làm mờ, không cắt mất hình.</p><select id="toAsp"><option>9:16</option><option>16:9</option><option>1:1</option><option>4:5</option></select><button class="btn2 pri" data-k="reframe" ${TSEL && isVid(TSEL) ? '' : 'disabled'}>Chạy</button></div>
         <div class="tool"><b>🖼 Ảnh thumbnail</b><p>Lấy một khung hình đẹp làm ảnh đại diện.</p><input id="toAt" type="number" value="2" min="0" step="0.5" title="giây"><button class="btn2 pri" data-k="thumbnail" ${TSEL && isVid(TSEL) ? '' : 'disabled'}>Chạy</button></div>
@@ -411,6 +417,12 @@ async function pgTools() {
   dz.ondragover = e => { e.preventDefault(); dz.classList.add('over'); }; dz.ondragleave = () => dz.classList.remove('over');
   dz.ondrop = e => { e.preventDefault(); dz.classList.remove('over'); up(e.dataTransfer.files); };
   page('tools').querySelectorAll('.fr').forEach(r => r.onclick = () => { TSEL = r.dataset.f; pgTools(); });
+  page('tools').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    if (!confirm(`Xoá "${b.dataset.del}"?`)) return;
+    await fetch('/api/tools/files?name=' + encodeURIComponent(b.dataset.del), { method: 'DELETE' });
+    if (TSEL === b.dataset.del) TSEL = null;
+    pgTools();
+  });
   page('tools').querySelectorAll('[data-k]').forEach(b => b.onclick = async () => {
     const k = b.dataset.k, opt = { aspect: $('#toAsp').value, at: +$('#toAt').value, lang: $('#toLang').value };
     if (k === 'translate_srt' && META.brain.backend === 'manual') return go('settings');

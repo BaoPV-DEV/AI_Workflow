@@ -65,6 +65,7 @@ body { font: 14px/1.5 var(--font); color: var(--ink); background: var(--page); d
 .btn2 { border: 1px solid #e3dff2; background: #fff; border-radius: 9px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
 .btn2:hover { border-color: #c4b5fd; color: var(--violet); }
 .btn2.pri { background: var(--violet); color: #fff; border-color: var(--violet); }
+.btn2.danger { color: #c0392b; } .btn2.danger:hover { background: #fdeceb; border-color: #f3b9b3; color: #c0392b; }
 .xbtn { border: 0; background: none; color: #ef4444; cursor: pointer; font-size: 15px; padding: 2px 6px; border-radius: 6px; }
 .xbtn:hover { background: #fee2e2; }
 .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; padding: 2px 9px; border-radius: 20px; background: var(--tint); color: #5b5390; font-weight: 600; }

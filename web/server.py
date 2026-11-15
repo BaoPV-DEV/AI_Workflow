@@ -178,6 +178,9 @@ class H(SimpleHTTPRequestHandler):
                 return self._json({"ok": True})
             if u == "/api/series":
                 return self._json(studio_api.series_delete(self._q().get("name", "")))
+            if u == "/api/tools/files":
+                studio_api.tools_delete(self._q().get("name", ""))
+                return self._json({"ok": True})
             return self._json({"error": "không có"}, 404)
         except Exception as e:
             return self._json({"error": f"{type(e).__name__}: {e}"}, 500)
