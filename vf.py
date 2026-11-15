@@ -21,7 +21,15 @@ def cmd_doctor(a):
     from engine.util import encoders, pick_encoder
 
     ok = lambda b: "✔" if b else "✘"
-    print(f"{ok(shutil.which('ffmpeg'))} ffmpeg   encoder: {pick_encoder(config.settings()['render'].get('encoder', 'auto'))}")
+    try:
+        from engine.util import ffmpeg, has_filter
+        from engine.pipeline import caption_mode, _ctx
+        exe = ffmpeg()
+        print(f"✔ ffmpeg: {exe}")
+        print(f"✔ encoder: {pick_encoder(config.settings()['render'].get('encoder', 'auto'))} · phụ đề: "
+              f"{'ffmpeg/libass' if has_filter('ass') else 'vẽ trong khung hình (không có libass)'}")
+    except Exception as e:
+        print(f"✘ ffmpeg: {e}")
     for mod, hint in [("playwright", "pip install playwright && python -m playwright install chromium"),
                       ("edge_tts", "pip install edge-tts"), ("faster_whisper", "pip install faster-whisper (tuỳ chọn)"),
                       ("anthropic", "pip install anthropic (tuỳ chọn – chỉ cần cho vf new/edit/translate)"),

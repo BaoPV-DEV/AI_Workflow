@@ -69,6 +69,7 @@
     if (qs.has('studio') || qs.has('play')) fit();
     if (input.style.texture) root.classList.add('tex-' + input.style.texture);
     def && def.setup && def.setup(input, root, VF);
+    setupCaptions();
     seek(0);
     window.__vfReady = true;
   }
@@ -87,10 +88,36 @@
     root.style.transform = m[cam] || '';
   }
 
+  /* Phụ đề karaoke vẽ trong khung hình (khi ffmpeg không có libass). */
+  let cap = null;
+  function setupCaptions() {
+    const c = input.captions;
+    cap = null;
+    if (!c || !(input.words || []).length) return;
+    const H = input.height, size = (c.size ?? 0.045) < 1 ? (c.size ?? 0.045) * H : c.size;
+    const box = el('div', { class: 'vf-cap' }, root);
+    Object.assign(box.style, { position: 'absolute', left: '6%', right: '6%', bottom: (c.y ?? 0.2) * H + 'px', zIndex: 70, textAlign: 'center',
+      font: `900 ${size}px ${c.font ? `'${c.font}', ` : ''}var(--title-font)`, lineHeight: 1.15, color: c.color || '#fff',
+      textShadow: [[2, 0], [-2, 0], [0, 2], [0, -2], [2, 2], [-2, -2], [2, -2], [-2, 2]].map(([x, y]) => `${x * size / 22}px ${y * size / 22}px 0 ${c.outline || '#000'}`).join(','),
+      textTransform: c.upper ? 'uppercase' : 'none' });
+    cap = { box, c, n: c.chunk || 4, last: '' };
+  }
+  function drawCaptions(t) {
+    if (!cap) return;
+    const w = input.words, i = wordAt(t);
+    if (i < 0 || t > w[w.length - 1].end + 0.4) { if (cap.last) { cap.box.innerHTML = ''; cap.last = ''; } return; }
+    const g0 = Math.floor(i / cap.n) * cap.n, grp = w.slice(g0, g0 + cap.n);
+    const key = g0 + ':' + i;
+    if (key === cap.last) return;
+    cap.last = key;
+    cap.box.innerHTML = grp.map((x, k) => g0 + k === i ? `<span style="color:${cap.c.highlight || '#ffd400'}">${x.word}</span>` : x.word).join(' ');
+  }
+
   function seek(t) {
     for (const a of document.getAnimations ? document.getAnimations() : []) { a.pause(); a.currentTime = t * 1000; }
     if (window.gsap) { gsap.globalTimeline.pause(); gsap.globalTimeline.time(t); }
     def && def.draw && def.draw(t, input, VF);
+    drawCaptions(t);
     camera(t);
   }
 

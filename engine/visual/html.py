@@ -64,6 +64,7 @@ def scene_input(job: Job) -> dict:
         "height": job.height, "camera": s.get("camera", "none"), "text": s.get("voice_text", ""),
         "assets": (job.project_dir / "assets").as_uri() + "/",
         "actions": config.library("actions")["actions"],
+        "captions": s.get("_captions"),
     }
 
 

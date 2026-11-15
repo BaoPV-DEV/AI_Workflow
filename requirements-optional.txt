@@ -1,0 +1,2 @@
+# Tuỳ chọn: .venv\Scripts\python -m pip install -r requirements-optional.txt
+faster-whisper>=1.0     # mốc thời gian từng từ cho piper/kokoro/giọng thu sẵn (tải model ~150 MB lần đầu)

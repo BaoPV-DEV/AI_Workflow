@@ -18,10 +18,10 @@ ASPECTS = {"9:16": (1080, 1920), "16:9": (1920, 1080), "1:1": (1080, 1080)}
 
 @lru_cache
 def settings() -> dict:
-    data = yaml.safe_load((CONFIG / "settings.yaml").read_text(encoding="utf-8")) or {}
+    data = yaml.safe_load((CONFIG / "settings.yaml").read_text(encoding="utf-8-sig")) or {}
     local = CONFIG / "settings.local.yaml"  # ghi đè riêng máy, bị git ignore
     if local.exists():
-        _merge(data, yaml.safe_load(local.read_text(encoding="utf-8")) or {})
+        _merge(data, yaml.safe_load(local.read_text(encoding="utf-8-sig")) or {})
     return data
 
 
@@ -42,7 +42,7 @@ def style(name: str) -> dict:
     path = CONFIG / "styles" / f"{name}.yaml"
     if not path.exists():
         raise FileNotFoundError(f"Không có style '{name}'. Có: {', '.join(list_styles())}")
-    return yaml.safe_load(path.read_text(encoding="utf-8"))
+    return yaml.safe_load(path.read_text(encoding="utf-8-sig"))
 
 
 def list_styles() -> list[str]:
@@ -51,7 +51,7 @@ def list_styles() -> list[str]:
 
 @lru_cache
 def library(name: str) -> dict:
-    return json.loads((LIBRARY / f"{name}.json").read_text(encoding="utf-8"))
+    return json.loads((LIBRARY / f"{name}.json").read_text(encoding="utf-8-sig"))
 
 
 def resolution(manifest: dict) -> tuple[int, int]:

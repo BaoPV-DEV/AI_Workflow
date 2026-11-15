@@ -1,24 +1,30 @@
 # Bắt đầu nhanh: video đầu tiên trong 10 phút (Windows)
 
-## 1. Cài một lần
+## 1. Cài một lần (một dòng lệnh)
 
-1. Cài **Python 3.10+** (python.org, tick *Add python.exe to PATH*) và **Git**.
-2. Cài ffmpeg: mở PowerShell, chạy `winget install Gyan.FFmpeg`, rồi **mở lại** cửa sổ.
-3. Lấy code và cài:
+Mở **PowerShell** (bấm Start, gõ `powershell`, Enter) rồi dán:
 
-```bat
-cd /d D:\
-git clone https://github.com/BaoPV-DEV/AI_Workflow.git
-cd AI_Workflow
-setup.bat
+```powershell
+irm https://raw.githubusercontent.com/BaoPV-DEV/AI_Workflow/main/install.ps1 | iex
 ```
 
-`setup.bat` tạo `.venv`, cài thư viện, Chromium và cuối cùng chạy `vf doctor`. Mọi dòng phải có ✔ (riêng `faster_whisper`, `anthropic`, `ANTHROPIC_API_KEY` là tuỳ chọn).
+Script tự làm hết, không cần winget, Git hay cài ffmpeg bằng tay:
+- chưa có Python 3.10+ thì tải Python 3.12 từ python.org và cài riêng cho user (không cần quyền admin);
+- tải code về `D:\AI_Workflow` (không có ổ D thì về thư mục người dùng);
+- cài thư viện vào `.venv`; ffmpeg đi kèm gói `imageio-ffmpeg`; quay cảnh bằng Microsoft Edge có sẵn;
+- tạo shortcut **AI Workflow Studio** trên Desktop và mở Studio, video mẫu `meo_thich_hop` có sẵn.
+
+Chạy lại đúng lệnh đó bất cứ lúc nào để cập nhật (giữ nguyên các video của bạn). Muốn cài chỗ khác: `$env:AIWF_DIR="E:\AI_Workflow"` trước khi chạy.
+
+Nếu PowerShell báo không chạy được script: dùng lệnh trên (nó không cần đổi ExecutionPolicy), hoặc tải repo dạng zip rồi bấm đúp `setup.bat`.
 
 ## 2. Chạy video mẫu có sẵn
 
+Bấm đúp shortcut **AI Workflow Studio** → **Video của tôi** → `meo_thich_hop` → **Xuất video**.
+
+Hoặc dòng lệnh (trong thư mục cài, ví dụ `cd /d D:\AI_Workflow`):
+
 ```bat
-xcopy /e /i examples\meo_thich_hop workspace\meo_thich_hop
 vf preview meo_thich_hop
 vf all meo_thich_hop
 ```
@@ -59,8 +65,8 @@ vf all vi_sao_bau_troi_mau_xanh
 | Thông báo | Cách xử lý |
 |---|---|
 | `'vf' is not recognized` | Đang không ở thư mục repo: `cd /d D:\AI_Workflow` |
-| `Chưa cài ffmpeg` | `winget install Gyan.FFmpeg`, mở lại cửa sổ |
-| `Không mở được trình duyệt` | `.venv\Scripts\python -m playwright install chromium` |
+| `Không tìm thấy ffmpeg` | `.venv\\Scripts\\python -m pip install imageio-ffmpeg` (hoặc chạy lại lệnh cài) |
+| `Không mở được trình duyệt` | Cập nhật Microsoft Edge, hoặc `.venv\Scripts\python -m playwright install chromium` |
 | Lỗi edge-tts / mạng | Kiểm tra internet. Thử hình không tiếng: tạo `config\settings.local.yaml` với `tts: {engine: silent}` |
 | Lỗi `h264_nvenc` | `config\settings.local.yaml`: `render: {encoder: libx264}` |
 | Máy nóng / chậm | `config\settings.local.yaml`: `render: {workers: 1}` |

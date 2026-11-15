@@ -6,16 +6,17 @@ Biến một chủ đề thành video hoàn chỉnh (giọng đọc, phụ đề
 chủ đề → Claude → project_manifest.json → [giọng đọc → mốc từ → quay cảnh → ghép] → video.mp4
 ```
 
-## Cài đặt (Windows)
+## Cài đặt (Windows, một dòng)
 
-```bat
-git clone https://github.com/BaoPV-DEV/AI_Workflow.git
-cd AI_Workflow
-setup.bat              :: tạo .venv, cài thư viện, Chromium, kiểm tra ffmpeg
-vf studio              :: mở Web Studio trong trình duyệt
+Mở PowerShell và dán:
+
+```powershell
+irm https://raw.githubusercontent.com/BaoPV-DEV/AI_Workflow/main/install.ps1 | iex
 ```
 
-Cần Python 3.10+ và ffmpeg (`winget install Gyan.FFmpeg`). Linux/macOS: `pip install -r requirements.txt && python -m playwright install chromium`, rồi dùng `python vf.py`.
+Tự cài Python (nếu thiếu), thư viện, ffmpeg đi kèm, dùng Edge có sẵn để quay cảnh, tạo shortcut **AI Workflow Studio** trên Desktop. Không cần winget, Git hay quyền admin. Chi tiết: [docs/QUICKSTART.md](docs/QUICKSTART.md).
+
+Linux/macOS: `pip install -r requirements.txt && python -m playwright install chromium`, rồi `python vf.py studio`.
 
 ## Ba cách tạo video
 

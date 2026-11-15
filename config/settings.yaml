@@ -25,6 +25,7 @@ render:
   preset: veryfast
   workers: 2                      # số cảnh quay song song (MX250: 1-2)
   captions: true                  # đốt phụ đề karaoke vào video
+  captions_mode: auto             # auto | ass (ffmpeg + libass) | html (vẽ trong khung hình, không cần libass)
   caption_words: 4                # số từ mỗi cụm phụ đề
   scene_pad: 0.25                 # giây nghỉ cuối mỗi cảnh
   music: ""                       # nhạc nền mặc định (đường dẫn), tự giảm âm khi có lời

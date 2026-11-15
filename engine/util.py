@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 from functools import lru_cache
@@ -11,11 +12,18 @@ def log(msg: str) -> None:
     print(msg, flush=True)
 
 
+@lru_cache
 def ffmpeg() -> str:
+    """ffmpeg trong PATH, nếu không có thì dùng bản đi kèm gói imageio-ffmpeg (tự tải qua pip)."""
     exe = shutil.which("ffmpeg")
-    if not exe:
-        raise RuntimeError("Chưa cài ffmpeg (Windows: winget install Gyan.FFmpeg)")
-    return exe
+    if exe:
+        return exe
+    try:
+        import imageio_ffmpeg
+
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception as e:
+        raise RuntimeError("Không tìm thấy ffmpeg. Chạy: pip install imageio-ffmpeg") from e
 
 
 def run(cmd: list, **kw) -> subprocess.CompletedProcess:
@@ -27,9 +35,28 @@ def run(cmd: list, **kw) -> subprocess.CompletedProcess:
 
 
 def probe_duration(path: Path) -> float:
-    exe = shutil.which("ffprobe") or "ffprobe"
-    r = run([exe, "-v", "error", "-show_entries", "format=duration", "-of", "json", path])
-    return float(json.loads(r.stdout)["format"]["duration"])
+    """Thời lượng file. WAV đọc trực tiếp; định dạng khác hỏi ffmpeg (không cần ffprobe)."""
+    path = Path(path)
+    if path.suffix.lower() == ".wav":
+        import wave
+
+        with wave.open(str(path)) as w:
+            return w.getnframes() / float(w.getframerate())
+    r = subprocess.run([ffmpeg(), "-hide_banner", "-i", str(path)], capture_output=True, text=True)
+    m = re.search(r"Duration: (\d+):(\d+):([\d.]+)", r.stderr)
+    if not m:
+        raise RuntimeError(f"Không đọc được thời lượng {path.name}")
+    h, mi, se = m.groups()
+    return int(h) * 3600 + int(mi) * 60 + float(se)
+
+
+@lru_cache
+def has_filter(name: str) -> bool:
+    try:
+        out = run([ffmpeg(), "-hide_banner", "-filters"]).stdout
+    except Exception:
+        return False
+    return any(len(l.split()) > 1 and l.split()[1] == name for l in out.splitlines())
 
 
 @lru_cache

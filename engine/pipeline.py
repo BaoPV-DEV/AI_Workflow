@@ -96,8 +96,21 @@ def _render_one(args):
         return key, h, f"{type(e).__name__}: {e}"
 
 
+def caption_mode(c: dict) -> str:
+    """ass: ffmpeg đốt phụ đề (cần libass). html: vẽ phụ đề ngay trong khung hình (không cần libass)."""
+    r = c["settings"]["render"]
+    if not r.get("captions", True) or not c["style"].get("captions", {}).get("enabled", True):
+        return "off"
+    mode = r.get("captions_mode", "auto")
+    if mode == "auto":
+        from .util import has_filter
+        mode = "ass" if has_filter("ass") else "html"
+    return mode
+
+
 def _jobs(d: Path, data: dict, c: dict, draft: bool, only):
     r = c["settings"]["render"]
+    cmode = caption_mode(c)
     enc = pick_encoder(r.get("encoder", "auto"))
     cast = build_cast(data, c["style"])
     clips = d / "build" / ("draft" if draft else "clips")
@@ -107,6 +120,8 @@ def _jobs(d: Path, data: dict, c: dict, draft: bool, only):
             raise RuntimeError("Chưa có thời lượng: chạy 'vf voice' trước")
         key = manifest.scene_key(s)
         sc = {**s, "acting_resolved": resolve_acting(s, cast)}
+        if cmode == "html" and s.get("captions") is not False and s.get("template_name") != "kinetic_text":
+            sc["_captions"] = {**c["style"].get("captions", {}), "chunk": r.get("caption_words", 4)}
         job = Job(scene=sc, project_dir=d, out=clips / f"{key}.mp4", width=c["w"], height=c["h"], fps=c["fps"],
                   duration=s["duration"], style=c["style"], cast=cast, encoder=enc, crf=r.get("crf", 20),
                   preset=r.get("preset", "veryfast"), draft=draft)
@@ -180,7 +195,7 @@ def render(project, draft=False, captions_on=None) -> Path:
     captions.write(out_dir / f"{pid}.srt", captions.build_srt(data["scenes"], offsets))
     vf = []
     cap_on = r.get("captions", True) if captions_on is None else captions_on
-    if cap_on and c["style"].get("captions", {}).get("enabled", True):
+    if cap_on and caption_mode(c) == "ass":
         ass = captions.write(build / "captions.ass",
                              captions.build_ass(data["scenes"], offsets, w, h, c["style"].get("captions", {}),
                                                 r.get("caption_words", 4)))
