@@ -28,11 +28,13 @@
 - retro_tv: Retro TV – màn CRT, scanline, màu bão hoà (tin tức, giật gân, bí ẩn)
 
 ## Nhân vật (cast.<Tên>.preset)
-classic, faceless, beanie, cozy, kid, elder, boss, worker, king, soldier, shadow
+classic, faceless, shadow, beanie, cozy, kid, girl, student, teacher, scientist, elder, grandma, boss, chef, gamer, worker, graduate, gentleman, king, soldier
 
 ## Acting (scene.acting[] cho stickman_stage)
 beat = {at: 'từ trong lời đọc'|'60%'|giây, act, who?, move?, mood?, hold?, say?, face?}
-act: stand, walk, run, talk, point, look, think, wave, cheer, celebrate, nod, shake_head, shrug, facepalm, sad, scared, angry, sit, read, work, fight, push, carry, present, handshake, hug, give, high_five, dance, sleep, fall, kneel, bow
+act: stand, walk, run, talk, explain, point, point_up, look, think, head_scratch, wave, cheer, celebrate, jump, clap, thumbs_up, nod, shake_head, shrug, facepalm, arms_crossed, hands_on_hips, sad, cry, laugh, scared, shocked, angry, sit, read, work, phone_call, salute, stretch, sneak, fight, push, carry, present, handshake, hug, give, high_five, eat, dance, sleep, fall, kneel, bow
 move: enter_left, enter_right, exit_left, exit_right, left, center, right, stay
-mood: neutral, happy, sad, surprised, angry, scared, tired, curious, proud
-hold: book, phone, coin, money, gift, bulb, sign, laptop, cup, flag, sword, key, star, trophy, magnifier, map, briefcase
+mood: neutral, happy, sad, surprised, angry, scared, tired, curious, proud, love, laugh
+emote (biểu tượng trên đầu): ! ? ❤ 💡 💢 💧 zzz ♪ ✨ 💦 ...
+hold: book, phone, coin, money, gift, bulb, sign, laptop, cup, flag, sword, key, star, trophy, magnifier, map, briefcase, microphone, pen, pizza, umbrella
+Tạo nhân vật riêng: cast.<Tên> = {preset?, build slim|normal|round, hair short|long|ponytail|bun|spiky|curly|bald, hair_color, outfit shirt|dress|coat, shirt (màu), hat beanie|cap|crown|helmet|tophat|chef|graduation, accessories [glasses, tie, bowtie, scarf, mustache, beard, headphones, backpack], scale}. Nhân vật đứng yên tự quay mặt về nhau; miệng nhép theo lời khi act là nói/giải thích.

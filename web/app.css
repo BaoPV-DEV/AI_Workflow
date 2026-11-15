@@ -154,3 +154,10 @@ body { font: 14px/1.5 var(--font); color: var(--ink); background: var(--page); d
 #pg-editor > header { gap: 10px; }
 @media (max-width: 1800px) { #pg-editor .steps .step span.long { display: none; } #ptitle { width: 180px; } }
 @media (max-width: 1550px) { #pg-editor .steps .step span { display: none; } #pg-editor { grid-template-columns: 260px minmax(0, 1fr) 340px; } }
+/* chống tràn chữ (tên dài không dấu cách) */
+.rl { grid-template-columns: minmax(0, 340px) minmax(0, 1fr); }
+.rl .it > div { min-width: 0; flex: 1; }
+.rl .it b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ph h1, .ep .t, .tc h4, .rlist .r .sp, .plan .row2 .t, .files .fr span { overflow-wrap: anywhere; min-width: 0; }
+.card, .tc, .ep, .way2, .gtile { min-width: 0; }
+.grid2 > * { min-width: 0; }

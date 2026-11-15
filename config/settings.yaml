@@ -33,16 +33,26 @@ render:
 visual:
   comfyui_url: "http://127.0.0.1:8188"   # đổi sang endpoint RunPod/Vast khi thuê GPU
   fal_key_env: FAL_KEY
+  default_workflow: sdxl_image          # workflow ComfyUI mặc định cho ảnh AI (templates/comfy_workflows)
 
 agent:
-  # Đổi tên model nếu Anthropic ra bản mới. "plan" viết kịch bản, "edit"/"translate" là việc nhỏ.
-  models:
-    plan: claude-sonnet-5-5
-    edit: claude-haiku-5-5
-    translate: claude-haiku-5-5
+  # Model cho từng việc: opus (mạnh nhất, tốn lượt nhất) | sonnet (cân bằng) | haiku (nhanh, rẻ)
+  tiers:
+    plan: opus          # viết kịch bản
+    ideas: sonnet       # tìm & chấm điểm chủ đề (tra web)
+    edit: haiku         # sửa cảnh bằng lời
+    translate: haiku    # dịch lồng tiếng
+    subtitles: haiku    # phụ đề thêm, dịch .srt
+    publish: haiku      # tiêu đề, mô tả, tag
+  # Tên model API ứng với từng mức (đổi khi Anthropic ra bản mới). Claude Code dùng thẳng opus/sonnet/haiku.
+  models_by_tier:
+    opus: claude-opus-5-5
+    sonnet: claude-sonnet-5-5
+    haiku: claude-haiku-5-5
   max_tokens: 16000
   budget_tokens_per_run: 60000    # agent tự dừng nếu vượt
   # Giá USD / 1 triệu token. Để trống (null) thì chỉ báo số token. Kiểm tra giá tại anthropic.com/pricing.
   prices:
+    claude-opus-5-5: {input: null, output: null, cache_read: null, cache_write: null}
     claude-sonnet-5-5: {input: null, output: null, cache_read: null, cache_write: null}
     claude-haiku-5-5: {input: null, output: null, cache_read: null, cache_write: null}

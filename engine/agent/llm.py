@@ -61,7 +61,7 @@ class LLM:
             raise RuntimeError("Chưa đặt ANTHROPIC_API_KEY. Không có key? Dùng: vf prompt ... rồi dán vào claude.ai, sau đó vf import")
         self.client = anthropic.Anthropic()
         a = config.settings().get("agent", {})
-        self.model = a.get("models", {}).get(role, "claude-sonnet-5-5")
+        self.model = api_model(role)
         self.max_tokens = a.get("max_tokens", 8000)
         self.budget = a.get("budget_tokens_per_run", 60000)
         self.usage = Usage()
@@ -121,7 +121,21 @@ class LLM:
 import shutil
 import subprocess
 
-CLI_ALIAS = {"plan": "sonnet", "edit": "haiku", "translate": "haiku", "ideas": "sonnet"}
+DEFAULT_TIER = {"plan": "opus", "ideas": "sonnet", "edit": "haiku", "translate": "haiku", "subtitles": "haiku", "publish": "haiku"}
+
+
+def tier(role: str) -> str:
+    a = config.settings().get("agent", {})
+    return (a.get("tiers") or {}).get(role) or (a.get("cli_models") or {}).get(role) or DEFAULT_TIER.get(role, "sonnet")
+
+
+def api_model(role: str) -> str:
+    a = config.settings().get("agent", {})
+    legacy = (a.get("models") or {}).get(role)
+    if legacy and not (a.get("tiers") or {}).get(role):
+        return legacy
+    t = tier(role)
+    return (a.get("models_by_tier") or {}).get(t) or {"opus": "claude-opus-5-5", "sonnet": "claude-sonnet-5-5", "haiku": "claude-haiku-5-5"}.get(t, t)
 
 
 class NoBackend(RuntimeError):
@@ -179,7 +193,7 @@ def run_cli(prompt: str, role: str = "plan", tools: str = "", cwd: str | None = 
     if not exe:
         raise NoBackend(MANUAL_HELP)
     a = config.settings().get("agent", {})
-    model = a.get("cli_models", {}).get(role) or CLI_ALIAS.get(role, "sonnet")
+    model = tier(role)
     cmd = [exe, "-p", "Làm đúng theo yêu cầu trong nội dung được cung cấp qua stdin.",
            "--output-format", "json", "--model", model]
     if tools:

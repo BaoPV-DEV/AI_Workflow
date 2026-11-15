@@ -6,9 +6,9 @@ const GENRES = { animation: 'Hoạt hình người que', motion_graphic: 'Motion
 const TPL_NAMES = { stickman_stage: 'Người que diễn', title_card_neon: 'Tiêu đề', kinetic_text: 'Chữ theo giọng', stat_card: 'Con số', bullet_list: 'Danh sách ý', bar_chart: 'Biểu đồ cột', compare_split: 'So sánh', timeline: 'Dòng thời gian', quote_card: 'Trích dẫn', headline_news: 'Bản tin' };
 const TPL_COLOR = { stickman_stage: '#f2a516', kinetic_text: '#e5484d', title_card_neon: '#e5484d', headline_news: '#e5484d', quote_card: '#e5484d', stat_card: '#2f5bea', bar_chart: '#2f5bea', timeline: '#2f5bea', bullet_list: '#1f9d6b', compare_split: '#1f9d6b' };
 const PROP_LABEL = { title: 'Tiêu đề', title_at: 'Hiện tiêu đề lúc', backdrop: 'Bối cảnh', items: 'Các mục', heading: 'Tiêu đề chính', subheading: 'Dòng phụ', kicker: 'Nhãn nhỏ phía trên', value: 'Con số', prefix: 'Chữ trước số', suffix: 'Chữ sau số', label: 'Nhãn', sub: 'Ghi chú nhỏ', at: 'Bắt đầu lúc', decimals: 'Số chữ số lẻ', icon: 'Ký hiệu đầu dòng', quote: 'Câu trích', author: 'Tác giả', bars: 'Các cột', unit: 'Đơn vị', left: 'Bên thứ nhất', right: 'Bên thứ hai', vs: 'Chữ ở giữa', winner: 'Bên được tô nổi', events: 'Các mốc', emphasize: 'Từ cần tô màu', group: 'Số từ mỗi lượt', bg_word: 'Chữ mờ phía sau', headline: 'Tiêu đề tin', ticker: 'Dòng chữ chạy', source: 'Nguồn tin', image: 'Ảnh nền', fit: 'Cách lấp khung' };
-const MOOD_VI = { neutral: 'bình thường', happy: 'vui', sad: 'buồn', surprised: 'ngạc nhiên', angry: 'tức giận', scared: 'sợ', tired: 'mệt', curious: 'tò mò', proud: 'tự hào' };
+const MOOD_VI = { neutral: 'bình thường', happy: 'vui', sad: 'buồn', surprised: 'ngạc nhiên', angry: 'tức giận', scared: 'sợ', tired: 'mệt', curious: 'tò mò', proud: 'tự hào', love: 'yêu thích', laugh: 'cười lớn' };
 const MOVE_VI = { stay: 'đứng yên', enter_left: 'vào từ trái', enter_right: 'vào từ phải', exit_left: 'ra phía trái', exit_right: 'ra phía phải', left: 'sang trái', center: 'ra giữa', right: 'sang phải' };
-const HOLD_VI = { book: 'sách', phone: 'điện thoại', coin: 'đồng xu', money: 'tiền', gift: 'quà', bulb: 'bóng đèn', sign: 'tấm biển', laptop: 'laptop', cup: 'cốc', flag: 'cờ', sword: 'kiếm', key: 'chìa khoá', star: 'ngôi sao', trophy: 'cúp', magnifier: 'kính lúp', map: 'bản đồ', briefcase: 'cặp' };
+const HOLD_VI = { book: 'sách', phone: 'điện thoại', coin: 'đồng xu', money: 'tiền', gift: 'quà', bulb: 'bóng đèn', sign: 'tấm biển', laptop: 'laptop', cup: 'cốc', flag: 'cờ', sword: 'kiếm', key: 'chìa khoá', star: 'ngôi sao', trophy: 'cúp', magnifier: 'kính lúp', map: 'bản đồ', briefcase: 'cặp', microphone: 'micro', pen: 'bút', pizza: 'pizza', umbrella: 'ô' };
 const VTYPES = { html_animation: 'Template dựng sẵn', svg_graphic: 'SVG tự vẽ', image: 'Ảnh có sẵn', video: 'Clip có sẵn', comfyui: 'Ảnh/clip AI (ComfyUI)', color: 'Nền màu' };
 const tplName = s => s.visual_type === 'html_animation' ? (TPL_NAMES[s.template_name] || s.template_name) : ({ svg_graphic: 'SVG', image: 'Ảnh', video: 'Clip', comfyui: 'ComfyUI', color: 'Nền màu' }[s.visual_type] || s.visual_type);
 
@@ -225,7 +225,8 @@ function panelActing(s) {
       <div><small>Di chuyển</small><select data-b="move">${opt(META.moves.map(x => [x, MOVE_VI[x] || x]), b.move, '—')}</select></div>
       <div><small>Cảm xúc</small><select data-b="mood">${opt(META.moods.map(x => [x, MOOD_VI[x] || x]), b.mood, '—')}</select></div>
       <div><small>Cầm</small><select data-b="hold">${opt(META.holds.map(x => [x, HOLD_VI[x] || x]), b.hold, '—')}</select></div>
-      <div class="wide"><small>Thoại trong bong bóng (tối đa 4 từ)</small><input data-b="say" value="${esc(b.say ?? '')}"></div>
+      <div><small>Biểu tượng</small><select data-b="emote">${opt((META.emotes || []).map(pair), b.emote, '—')}</select></div>
+      <div style="grid-column: span 2"><small>Thoại trong bong bóng (tối đa 4 từ)</small><input data-b="say" value="${esc(b.say ?? '')}"></div>
     </div>`).join('')}
     <button id="addBeat">Thêm nhịp diễn</button>`;
   $('#addBeat').onclick = addBeat;

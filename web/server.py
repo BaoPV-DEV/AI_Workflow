@@ -39,10 +39,11 @@ def run_job(args: list[str]) -> str:
     return jid
 
 
-MOODS = ["neutral", "happy", "sad", "surprised", "angry", "scared", "tired", "curious", "proud"]
+MOODS = ["neutral", "happy", "sad", "surprised", "angry", "scared", "tired", "curious", "proud", "love", "laugh"]
 MOVES = ["stay", "enter_left", "enter_right", "exit_left", "exit_right", "left", "center", "right"]
 HOLDS = ["book", "phone", "coin", "money", "gift", "bulb", "sign", "laptop", "cup", "flag", "sword", "key", "star",
-         "trophy", "magnifier", "map", "briefcase"]
+         "trophy", "magnifier", "map", "briefcase", "microphone", "pen", "pizza", "umbrella"]
+EMOTES = ["!", "?", "❤", "💡", "💢", "💧", "zzz", "♪", "✨", "💦", "..."]
 
 
 def status(d: Path, data: dict) -> dict:
@@ -187,7 +188,7 @@ class H(SimpleHTTPRequestHandler):
                 return self._json(studio_api.research_load(self._q().get("name", "")))
             if u == "/api/settings":
                 return self._json({"values": studio_api.settings_get(), "brain": brain(), "styles": config.list_styles(),
-                                   "root": str(config.ROOT)})
+                                   "root": str(config.ROOT), "workflows": studio_api.workflows()})
             if u == "/api/gpu":
                 url = config.settings().get("visual", {}).get("comfyui_url", "")
                 return self._json({"url": url, **studio_api.gpu_ping(url), "workflows": studio_api.workflows()})
@@ -208,7 +209,7 @@ class H(SimpleHTTPRequestHandler):
                                    "templates": catalog.templates(with_demo=True),
                                    "actions": {k: v.get("label", k) for k, v in acts["actions"].items()},
                                    "characters": config.library("characters")["characters"],
-                                   "moods": MOODS, "moves": MOVES, "holds": HOLDS,
+                                   "moods": MOODS, "moves": MOVES, "holds": HOLDS, "emotes": EMOTES,
                                    "voices": config.settings().get("tts", {}).get("voices", {}),
                                    "languages": config.library("languages")["languages"], "brain": brain(),
                                    "presets": config.library("presets")["presets"],

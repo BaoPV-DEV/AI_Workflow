@@ -67,7 +67,7 @@ def episode(d: Path, data: dict) -> dict:
     if not thumb and (d / "build" / "thumb.jpg").exists():
         thumb = d / "build" / "thumb.jpg"
     subs = sorted({p.suffixes[-2].lstrip(".") for p in out.glob("*.*.srt")}) if out.exists() else []
-    return {"id": d.name, "title": data.get("title") or d.name, "series": data.get("series", ""),
+    return {"id": d.name, "title": data.get("title") or d.name.replace("_", " ").capitalize(), "series": data.get("series", ""),
             "scenes": len(scenes), "lang": data.get("lang", "vi"), "aspect": data.get("aspect_ratio", "9:16"),
             "duration": round(sum(s.get("duration", 0) for s in scenes), 1), "style": data.get("style", ""),
             "voiced": all(s.get("duration") for s in scenes) and bool(scenes),
@@ -206,7 +206,7 @@ def extra_subtitles(pid: str, langs: list[str]) -> list[str]:
         if not cache.get(lang) or len(cache[lang]) != len(scenes):
             schema = {"type": "object", "required": ["lines"], "properties": {"lines": {"type": "array", "items": {"type": "string"}}}}
             info = config.language(lang)
-            res = complete_json("translate", ["Dịch phụ đề video. Giữ đúng số dòng và thứ tự, mỗi dòng là một cảnh. Ngắn gọn, tự nhiên."],
+            res = complete_json("subtitles", ["Dịch phụ đề video. Giữ đúng số dòng và thứ tự, mỗi dòng là một cảnh. Ngắn gọn, tự nhiên."],
                                 f"Ngôn ngữ đích: {info['name']} ({lang})\n" + json.dumps([s.get("voice_text", "") for s in scenes], ensure_ascii=False),
                                 schema, "submit")
             cache[lang] = res["lines"][:len(scenes)] + [""] * max(0, len(scenes) - len(res["lines"]))
@@ -242,7 +242,7 @@ def publish_pack(pid: str, platform: str = "YouTube") -> dict:
             chapters.append(f"{int(t // 60)}:{int(t % 60):02d} {(s.get('props') or {}).get('heading', '').replace('*', '')}")
         t += s.get("duration", 0)
     script = "\n".join(s.get("voice_text", "") for s in data["scenes"])
-    res = complete_json("translate", [
+    res = complete_json("publish", [
         "Viết gói đăng video tối ưu tìm kiếm nhưng trung thực (không giật tít sai sự thật). Ngôn ngữ = ngôn ngữ kịch bản. "
         "title ≤ 70 ký tự, 3 alt_titles, description 2 đoạn + câu hỏi gợi bình luận, 15 tags, 3-5 hashtags, "
         "thumbnail_text ≤ 4 từ, pinned_comment."],
@@ -291,7 +291,7 @@ def tool_run(kind: str, src: str, opt: dict) -> str:
         lang = opt.get("lang", "en")
         blocks = s.read_text(encoding="utf-8-sig").strip().split("\n\n")
         lines = ["\n".join(b.splitlines()[2:]) for b in blocks]
-        res = complete_json("translate", ["Dịch từng dòng phụ đề, giữ nguyên số dòng và thứ tự."],
+        res = complete_json("subtitles", ["Dịch từng dòng phụ đề, giữ nguyên số dòng và thứ tự."],
                             f"Ngôn ngữ đích: {lang}\n" + json.dumps(lines, ensure_ascii=False),
                             {"type": "object", "required": ["lines"], "properties": {"lines": {"type": "array", "items": {"type": "string"}}}}, "submit")
         new = ["\n".join(b.splitlines()[:2] + [t]) for b, t in zip(blocks, res["lines"])]
@@ -324,7 +324,9 @@ def workflows() -> list[str]:
 LOCAL = config.CONFIG / "settings.local.yaml"
 EDITABLE = {"tts.engine", "tts.rate", "render.workers", "render.encoder", "render.captions", "render.captions_mode",
             "render.caption_words", "render.music", "default_style", "default_aspect", "default_lang", "fps",
-            "agent.backend", "visual.comfyui_url", "visual.browser_channel", "trends.youtube_api_key"}
+            "agent.backend", "visual.comfyui_url", "visual.browser_channel", "visual.default_workflow", "trends.youtube_api_key",
+            "agent.tiers.plan", "agent.tiers.ideas", "agent.tiers.edit", "agent.tiers.translate", "agent.tiers.subtitles",
+            "agent.tiers.publish"}
 
 
 def settings_get() -> dict:

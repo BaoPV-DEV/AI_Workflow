@@ -36,7 +36,11 @@
         "head": {"enum": ["hollow", "filled"]},
         "ink": {"type": "string"},
         "shirt": {"type": "string"},
-        "hat": {"enum": ["none", "beanie", "cap", "crown", "helmet", "hair"]},
+        "hat": {"enum": ["none", "beanie", "cap", "crown", "helmet", "hair", "tophat", "chef", "graduation"]},
+        "hair": {"enum": ["short", "long", "ponytail", "bun", "spiky", "curly", "bald"]},
+        "hair_color": {"type": "string"}, "skin": {"type": "string"}, "head_fill": {"type": "string"},
+        "outfit": {"enum": ["shirt", "dress", "coat"]}, "build": {"enum": ["slim", "normal", "round"]},
+        "accessories": {"type": "array", "items": {"enum": ["glasses", "tie", "bowtie", "scarf", "mustache", "beard", "headphones", "backpack"]}},
         "hat_color": {"type": "string"},
         "scale": {"type": "number", "minimum": 0.5, "maximum": 1.5},
         "face": {"type": "boolean"}
@@ -50,10 +54,11 @@
         "act": {"type": "string"},
         "who": {"type": "string"},
         "move": {"enum": ["enter_left", "enter_right", "exit_left", "exit_right", "left", "right", "center", "stay"]},
-        "mood": {"enum": ["neutral", "happy", "sad", "surprised", "angry", "scared", "tired", "curious", "proud"]},
+        "mood": {"enum": ["neutral", "happy", "sad", "surprised", "angry", "scared", "tired", "curious", "proud", "love", "laugh"]},
         "face": {"enum": ["left", "right"]},
         "hold": {"type": "string"},
-        "say": {"type": "string", "description": "bong bóng thoại ngắn"}
+        "say": {"type": "string", "description": "bong bóng thoại ngắn"},
+        "emote": {"enum": ["!", "?", "❤", "💡", "💢", "💧", "zzz", "♪", "✨", "💦", "..."]}
       }
     },
     "scene": {

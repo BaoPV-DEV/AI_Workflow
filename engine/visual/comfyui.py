@@ -30,12 +30,12 @@ class ComfyAdapter(Adapter):
     visual_types = ("comfyui",)
 
     def fingerprint(self, job: Job) -> list:
-        wf = config.TEMPLATES / "comfy_workflows" / f"{job.scene.get('workflow', 'sdxl_image')}.json"
+        wf = config.TEMPLATES / "comfy_workflows" / f"{job.scene.get('workflow') or config.settings()['visual'].get('default_workflow', 'sdxl_image')}.json"
         return [wf, job.scene.get("prompt"), job.scene.get("seed")]
 
     def render(self, job: Job) -> Path:
         base = config.settings()["visual"]["comfyui_url"].rstrip("/")
-        name = job.scene.get("workflow", "sdxl_image")
+        name = job.scene.get("workflow") or config.settings()["visual"].get("default_workflow", "sdxl_image")
         wf_text = (config.TEMPLATES / "comfy_workflows" / f"{name}.json").read_text(encoding="utf-8")
         seed = job.scene.get("seed", random.randint(1, 2**31))
         prompt = (job.scene.get("prompt") or "") + ", " + job.style.get("image_prompt_suffix", "")

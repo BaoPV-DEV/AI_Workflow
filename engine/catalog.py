@@ -42,8 +42,12 @@ def text(compact: bool = True) -> str:
               "beat = {at: 'từ trong lời đọc'|'60%'|giây, act, who?, move?, mood?, hold?, say?, face?}",
               "act: " + ", ".join(acts["actions"]),
               "move: enter_left, enter_right, exit_left, exit_right, left, center, right, stay",
-              "mood: neutral, happy, sad, surprised, angry, scared, tired, curious, proud",
-              "hold: book, phone, coin, money, gift, bulb, sign, laptop, cup, flag, sword, key, star, trophy, magnifier, map, briefcase"]
+              "mood: neutral, happy, sad, surprised, angry, scared, tired, curious, proud, love, laugh",
+              "emote (biểu tượng trên đầu): ! ? ❤ 💡 💢 💧 zzz ♪ ✨ 💦 ...",
+              "hold: book, phone, coin, money, gift, bulb, sign, laptop, cup, flag, sword, key, star, trophy, magnifier, map, briefcase, microphone, pen, pizza, umbrella",
+              "Tạo nhân vật riêng: cast.<Tên> = {preset?, build slim|normal|round, hair short|long|ponytail|bun|spiky|curly|bald, hair_color, "
+              "outfit shirt|dress|coat, shirt (màu), hat beanie|cap|crown|helmet|tophat|chef|graduation, accessories [glasses, tie, bowtie, scarf, "
+              "mustache, beard, headphones, backpack], scale}. Nhân vật đứng yên tự quay mặt về nhau; miệng nhép theo lời khi act là nói/giải thích."]
     return "\n".join(lines) + "\n"
 
 

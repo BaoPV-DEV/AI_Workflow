@@ -432,6 +432,11 @@ async function pgSettings() {
         <label style="margin-top:0">Chế độ</label>${sel('agent.backend', [['', 'Tự chọn (API key → Claude Code → dán tay)'], ['cli', 'Claude Code (gói Claude của bạn)'], ['api', 'API key'], ['manual', 'Chỉ dán tay qua claude.ai']])}
         <div class="tintbox"><b>Claude Desktop</b><p class="small muted" style="margin:4px 0 8px">Chat "tìm chủ đề hot và làm 1 video" ngay trong Claude Desktop (mọi gói).</p><button class="btn2 pri" id="smcp">Kết nối Claude Desktop</button> <span class="small muted" id="smcpst"></span></div>
         <div class="tintbox"><b>Claude Code</b> <span class="small muted">(gói Pro/Max)</span><p class="small muted" style="margin:4px 0 6px">Cài trong PowerShell rồi gõ <code>claude</code> một lần để đăng nhập:</p><code style="display:block;background:#fff;padding:6px 9px;border-radius:7px;font-size:12.5px">irm https://claude.ai/install.ps1 | iex</code></div></div>
+      <div class="card"><div class="cap">🤖 Model AI cho từng việc</div>
+        <p class="small muted" style="margin:0 0 8px">Việc cần sáng tạo dùng model mạnh, việc lặp lại dùng model nhẹ để tiết kiệm lượt dùng của gói Claude (hoặc tiền API).</p>
+        ${[['plan', '✍️ Viết kịch bản'], ['ideas', '🔥 Tìm & chấm chủ đề (tra web)'], ['edit', '🎛 Sửa cảnh bằng lời'], ['translate', '🌐 Dịch lồng tiếng'], ['subtitles', '💬 Phụ đề thêm, dịch .srt'], ['publish', '🚀 Gói đăng (tiêu đề, mô tả, tag)']]
+          .map(([k, n]) => `<div class="row" style="margin-top:6px"><span style="flex:1.3">${n}</span>${sel('agent.tiers.' + k, [['opus', 'Opus · mạnh nhất'], ['sonnet', 'Sonnet · cân bằng'], ['haiku', 'Haiku · nhanh, nhẹ']])}</div>`).join('')}
+        <div class="row" style="margin-top:6px"><span style="flex:1.3">🎨 Ảnh AI (GPU, không dùng Claude)</span>${sel('visual.default_workflow', (s.workflows || ['sdxl_image']).map(w => [w, w]))}</div></div>
       <div class="card"><div class="cap">🎙 Giọng đọc &amp; phụ đề</div>
         <label style="margin-top:0">Bộ tạo giọng</label>${sel('tts.engine', [['auto', 'Tự động: Edge TTS, lỗi thì gTTS'], ['edge', 'Chỉ Edge TTS'], ['gtts', 'Chỉ gTTS'], ['piper', 'Piper (offline)'], ['silent', 'Không tiếng (chỉ để thử hình)']])}
         <label>Tốc độ đọc</label>${sel('tts.rate', [['-10%', 'Chậm hơn'], ['+0%', 'Bình thường'], ['+10%', 'Nhanh hơn'], ['+20%', 'Rất nhanh']])}

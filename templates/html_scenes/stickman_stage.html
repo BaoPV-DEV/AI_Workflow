@@ -105,7 +105,9 @@ VF.scene({
     const W = inp.width;
     for (const [n, st] of Object.entries(sticks)) {
       const s = VF.stick.stateAt(tracks[n], t, VF.lib, W);
-      st.pose(s.p, s.x, ground, s.face, s.mood, s.hold, t, s.label, s.seated);
+      const w = (inp.words || []).find(x => t >= x.start && t < x.end);
+      const talk = s.talking && w ? 0.45 + 0.55 * Math.abs(Math.sin((t - w.start) * 13)) : 0;
+      st.pose(s.p, s.x, ground, s.face, { mood: s.mood, hold: s.hold, t, label: s.label, seated: s.seated, talk, idle: s.idle, emote: s.emote, emoteAge: s.emoteAge });
       const since = t - (s.sayT ?? 0);
       st.say(s.say || '', s.say ? VF.clamp(since / 0.15) * VF.clamp((2.6 - since) / 0.3) : 0);
     }
