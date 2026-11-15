@@ -74,7 +74,10 @@ def _edge(text: str, out: Path, voice: str, rate: str):
                 words.append({"word": ch["text"], "start": round(s, 3), "end": round(s + ch["duration"] / 1e7, 3)})
         return bytes(audio), words
 
-    audio, words = asyncio.run(go())
+    try:  # chặn treo vô thời hạn khi mạng tới máy chủ edge-tts bị nghẽn (không lỗi, chỉ im lặng)
+        audio, words = asyncio.run(asyncio.wait_for(go(), timeout=25))
+    except asyncio.TimeoutError as e:
+        raise RuntimeError("edge-tts không phản hồi sau 25s (mạng có thể bị chặn/nghẽn)") from e
     if len(audio) < 2000:
         raise RuntimeError(f"edge-tts trả về âm thanh rỗng (giọng '{voice}' có đúng không?)")
     mp3 = out.with_suffix(".mp3")
