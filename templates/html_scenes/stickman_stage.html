@@ -3,7 +3,8 @@
 <link rel="stylesheet" href="_lib/base.css">
 <script type="application/json" data-doc>
 {"desc": "Sân khấu người que: nhân vật trong cast diễn theo 'acting' của cảnh (đi, chỉ, cầm đồ, cảm xúc, thoại).",
- "props": {"title": "chữ lớn phía trên (≤6 từ, tuỳ chọn)", "title_at": "lúc hiện title", "backdrop": "plain|room|office|street|nature|night|stage|space",
+ "props": {"title": "chữ lớn phía trên (≤6 từ, tuỳ chọn)", "title_at": "lúc hiện title", "backdrop": "plain|studio|room|bedroom|kitchen|office|classroom|library|lab|cafe|shop|hospital|bus|street|city_night|park|nature|forest|beach|mountain|desert|farm|river|temple|castle|space|stage|night",
+           "time": "day|sunset|night – thời điểm (bầu trời, đèn, sao)", "weather": "none|rain|snow|leaves|fog",
            "items": "[{emoji|text, x:0-1, y:0-1, size:0-1, at}] đồ vật/biểu tượng hiện ra trên sân khấu"},
  "needs": "acting trong scene; who = tên trong cast"}
 </script>
@@ -19,56 +20,11 @@
             {"who": "Mi", "t": 3.4, "act": "cheer", "mood": "happy"}]}
 </script>
 <script src="_lib/runtime.js"></script>
+<script src="_lib/backdrops.js"></script>
 <script src="_lib/stickman.js"></script>
 </head><body>
 <script>
-let svg, sticks = {}, tracks, items = [], titleEl, ground, S, input;
-
-function backdrop(g, kind, W, H, gy, st) {
-  const { el } = VF, ink = 'var(--ink)';
-  if (st.sky) {
-    const d = el('defs', {}, g), lg = el('linearGradient', { id: 'sky', x1: 0, y1: 0, x2: 0, y2: 1 }, d);
-    el('stop', { offset: 0, 'stop-color': st.sky[0] }, lg); el('stop', { offset: 1, 'stop-color': st.sky[1] }, lg);
-    el('rect', { width: W, height: gy, fill: 'url(#sky)' }, g);
-  }
-  if (kind === 'night' || kind === 'space') {
-    el('rect', { width: W, height: H, fill: kind === 'space' ? '#070b1f' : '#101a33' }, g);
-    for (let i = 0; i < 70; i++) el('circle', { cx: (i * 397) % W, cy: (i * 211) % (gy * 0.9), r: 1.5 + (i % 3), fill: '#fff', opacity: 0.4 + (i % 5) / 10 }, g);
-    el('circle', { cx: W * 0.8, cy: H * 0.14, r: W * 0.06, fill: '#fdf6d8' }, g);
-  }
-  if (kind === 'room' || kind === 'office') {
-    el('rect', { x: W * 0.08, y: gy - H * 0.36, width: W * 0.26, height: H * 0.16, rx: 6, fill: 'none', stroke: ink, 'stroke-width': 5, opacity: .5 }, g);
-    el('line', { x1: W * 0.21, y1: gy - H * 0.36, x2: W * 0.21, y2: gy - H * 0.2, stroke: ink, 'stroke-width': 4, opacity: .4 }, g);
-    if (kind === 'office') {
-      el('rect', { x: W * 0.62, y: gy - H * 0.11, width: W * 0.3, height: H * 0.012, fill: ink, opacity: .7 }, g);
-      el('line', { x1: W * 0.65, y1: gy - H * 0.1, x2: W * 0.65, y2: gy, stroke: ink, 'stroke-width': 5, opacity: .6 }, g);
-      el('line', { x1: W * 0.89, y1: gy - H * 0.1, x2: W * 0.89, y2: gy, stroke: ink, 'stroke-width': 5, opacity: .6 }, g);
-      el('rect', { x: W * 0.7, y: gy - H * 0.17, width: W * 0.13, height: H * 0.06, rx: 4, fill: 'var(--a2)', opacity: .8 }, g);
-    } else {
-      el('rect', { x: W * 0.66, y: gy - H * 0.28, width: W * 0.2, height: H * 0.28, rx: 8, fill: 'none', stroke: ink, 'stroke-width': 5, opacity: .4 }, g);
-    }
-  }
-  if (kind === 'street') {
-    [[0.05, 0.3], [0.2, 0.42], [0.62, 0.36], [0.8, 0.5]].forEach(([x, h]) => {
-      el('rect', { x: W * x, y: gy - H * h * 0.6, width: W * 0.15, height: H * h * 0.6, fill: 'var(--ink)', opacity: .1 }, g);
-    });
-    el('line', { x1: W * 0.9, y1: gy, x2: W * 0.9, y2: gy - H * 0.3, stroke: ink, 'stroke-width': 6, opacity: .5 }, g);
-    el('circle', { cx: W * 0.9, cy: gy - H * 0.3, r: W * 0.025, fill: 'var(--a3)', opacity: .9 }, g);
-  }
-  if (kind === 'nature') {
-    el('circle', { cx: W * 0.82, cy: H * 0.16, r: W * 0.07, fill: 'var(--a3)', opacity: .8 }, g);
-    el('path', { d: `M0 ${gy} Q${W * 0.25} ${gy - H * 0.16} ${W * 0.5} ${gy} T${W} ${gy} Z`, fill: 'var(--a2)', opacity: .25 }, g);
-    [[0.12, 1], [0.88, 0.8]].forEach(([x, s]) => {
-      el('line', { x1: W * x, y1: gy, x2: W * x, y2: gy - H * 0.12 * s, stroke: '#6d4c41', 'stroke-width': 10 * s }, g);
-      el('circle', { cx: W * x, cy: gy - H * 0.16 * s, r: W * 0.08 * s, fill: '#66bb6a', opacity: .9 }, g);
-    });
-  }
-  if (kind === 'stage') {
-    el('ellipse', { cx: W / 2, cy: gy, rx: W * 0.42, ry: H * 0.03, fill: 'var(--a3)', opacity: .25 }, g);
-    el('path', { d: `M${W * 0.5} 0 L${W * 0.18} ${gy} L${W * 0.82} ${gy} Z`, fill: '#fff', opacity: .08 }, g);
-  }
-  el('line', { x1: 0, y1: gy, x2: W, y2: gy, stroke: st.ground || ink, 'stroke-width': Math.max(4, W * 0.005), 'stroke-linecap': 'round' }, g);
-}
+let svg, sticks = {}, tracks, items = [], titleEl, ground, S, input, bd;
 
 VF.scene({
   setup(inp, root) {
@@ -77,8 +33,9 @@ VF.scene({
     ground = portrait ? H * 0.69 : H * 0.8;
     S = (portrait ? W * 0.5 : H * 0.46) * (inp.props?.zoom || 1);
     svg = el('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, class: 'layer' }, root);
-    backdrop(el('g', {}, svg), p.backdrop || 'plain', W, H, ground, inp.style || {});
-    const itemsG = el('g', {}, svg), figG = el('g', {}, svg);
+    const backG = el('g', {}, svg), itemsG = el('g', {}, svg), figG = el('g', {}, svg), frontG = el('g', {}, svg);
+    bd = VF.backdrops.draw(backG, p.backdrop || 'plain', { W, H, gy: ground, style: inp.style || {}, time: p.time || 'day', weather: p.weather || 'none' }, frontG);
+    if (bd.dark && !(inp.style || {}).bg?.match(/^#[0-3]/)) figG.setAttribute('style', 'filter: drop-shadow(0 0 3px rgba(255,255,255,.95)) drop-shadow(0 0 1px #fff)');
     const css = getComputedStyle(document.documentElement);
     const colors = { ink: css.getPropertyValue('--ink').trim(), a1: css.getPropertyValue('--a1').trim(), a2: css.getPropertyValue('--a2').trim(), a3: css.getPropertyValue('--a3').trim() };
     const cast = Object.keys(inp.cast || {}).length ? inp.cast : { hero: {} };
@@ -103,6 +60,7 @@ VF.scene({
   },
   draw(t, inp) {
     const W = inp.width;
+    bd && bd.update(t);
     for (const [n, st] of Object.entries(sticks)) {
       const s = VF.stick.stateAt(tracks[n], t, VF.lib, W);
       const w = (inp.words || []).find(x => t >= x.start && t < x.end);

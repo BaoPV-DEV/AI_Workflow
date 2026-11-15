@@ -34,7 +34,18 @@ ACT_RULES = [  # (mẫu, act, mood)
 ]
 HOLD_RULES = [(r"tiền|giá|đồng|money|price", "money"), (r"sách|học|book", "book"), (r"điện thoại|phone", "phone"),
               (r"ý tưởng|idea|sáng tạo", "bulb"), (r"bản đồ|đường|map|travel", "map"), (r"cúp|giải|trophy|win", "trophy")]
-BACKDROPS = ["room", "street", "office", "nature", "stage", "night"]
+BACKDROPS = ["room", "office", "street", "park", "cafe", "studio", "nature", "library"]
+PLACE_RULES = [(r"bếp|nấu|món ăn|kitchen|cook", "kitchen"), (r"trường|lớp học|giáo viên|học sinh|school|class", "classroom"),
+               (r"thư viện|sách|library", "library"), (r"bệnh viện|bác sĩ|thuốc|hospital|doctor", "hospital"),
+               (r"cà phê|quán|cafe|coffee", "cafe"), (r"chợ|cửa hàng|mua sắm|market|shop", "shop"),
+               (r"đường phố|thành phố|xe cộ|street|city", "street"), (r"công viên|park", "park"), (r"rừng|forest", "forest"),
+               (r"biển|bãi biển|sóng|beach|sea|ocean", "beach"), (r"núi|leo núi|mountain", "mountain"), (r"sa mạc|desert", "desert"),
+               (r"nông trại|ruộng|trang trại|farm", "farm"), (r"sông|cầu|river|bridge", "river"),
+               (r"vũ trụ|hành tinh|ngôi sao|tên lửa|space|planet|rocket", "space"), (r"ngủ|giường|phòng ngủ|sleep|bed", "bedroom"),
+               (r"văn phòng|công ty|sếp|họp|office|meeting", "office"), (r"thí nghiệm|nhà khoa học|lab|scientist", "lab"),
+               (r"lâu đài|nhà vua|hoàng|castle|king", "castle"), (r"đền|cổ đại|la mã|hy lạp|temple|ancient", "temple"),
+               (r"xe buýt|chuyến đi|bus|trip", "bus"), (r"sân khấu|biểu diễn|stage|show", "stage")]
+WEATHER_RULES = [(r"mưa|rain", "rain"), (r"tuyết|snow|mùa đông|winter", "snow"), (r"mùa thu|lá rơi|autumn|fall leaves", "leaves"), (r"sương mù|fog", "fog")]
 
 
 def sentences(text: str) -> list[str]:
@@ -125,10 +136,21 @@ def scene_for(text: str, i: int, n: int, cast: list[str], state: dict) -> dict:
     if len(cast) > 1:
         other = cast[(i + 1) % len(cast)]
         beats.append({"who": other, "at": "60%", "act": "nod" if mood in ("neutral", "happy", "curious") else "shrug", "mood": mood})
-    if i % 3 == 0:
-        state["backdrop"] = BACKDROPS[(i // 3) % len(BACKDROPS)]
-    return {**base, "visual_type": "html_animation", "template_name": "stickman_stage",
-            "props": {"backdrop": state.get("backdrop", "room")}, "acting": beats}
+    place = next((b for pat, b in PLACE_RULES if re.search(pat, text, re.I)), None)
+    if place:
+        state["backdrop"] = place
+    elif i % 3 == 0 or "backdrop" not in state:
+        state["backdrop"] = BACKDROPS[state.setdefault("rot", 0) % len(BACKDROPS)]
+        state["rot"] += 1
+    props = {"backdrop": state["backdrop"]}
+    if re.search(r"ban đêm|buổi tối|đêm khuya|night|evening", text, re.I):
+        props["time"] = "night"
+    elif re.search(r"hoàng hôn|chiều tà|sunset", text, re.I):
+        props["time"] = "sunset"
+    wx = next((w for pat, w in WEATHER_RULES if re.search(pat, text, re.I)), None)
+    if wx:
+        props["weather"] = wx
+    return {**base, "visual_type": "html_animation", "template_name": "stickman_stage", "props": props, "acting": beats}
 
 
 def build(text: str, title: str = "", lang: str = "vi", aspect: str = "9:16", style: str | None = None,
