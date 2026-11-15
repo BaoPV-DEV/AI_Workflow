@@ -66,6 +66,8 @@ def episode(d: Path, data: dict) -> dict:
         thumb = next(iter(sorted((d / "preview").glob("s*.jpg"))), None) if (d / "preview").exists() else None
     if not thumb and (d / "build" / "thumb.jpg").exists():
         thumb = d / "build" / "thumb.jpg"
+    if not thumb:  # chưa "Xem trước" lần nào nhưng đã xuất video → tự trích 1 khung hình làm ảnh đại diện
+        thumb = thumbnail(d.name)
     subs = sorted({p.suffixes[-2].lstrip(".") for p in out.glob("*.*.srt")}) if out.exists() else []
     return {"id": d.name, "title": data.get("title") or d.name.replace("_", " ").capitalize(), "series": data.get("series", ""),
             "scenes": len(scenes), "lang": data.get("lang", "vi"), "aspect": data.get("aspect_ratio", "9:16"),
@@ -99,14 +101,16 @@ def delete_project(pid: str) -> None:
     shutil.move(str(d), str(trash / f"{d.name}_{int(time.time())}"))
 
 
-def thumbnail(pid: str) -> Path | None:
-    """Ảnh đại diện từ video đã xuất (khi chưa có ảnh xem trước)."""
+def thumbnail(pid: str, at: float | None = None) -> Path | None:
+    """Ảnh đại diện từ video đã xuất (khi chưa có ảnh xem trước).
+    at: chỉ định giây muốn lấy khung hình (vd. người dùng chọn lại) → luôn ghi đè."""
     d = manifest.project_dir(pid)
     t = d / "build" / "thumb.jpg"
     vids = sorted((d / "out").glob("*.mp4")) if (d / "out").exists() else []
-    if not t.exists() and vids:
+    if vids and (at is not None or not t.exists()):
         t.parent.mkdir(exist_ok=True)
-        run([ffmpeg(), "-y", "-v", "error", "-ss", "1.5", "-i", vids[0], "-frames:v", "1", "-vf", "scale=480:-2", t])
+        run([ffmpeg(), "-y", "-v", "error", "-ss", f"{at if at is not None else 1.5:.2f}", "-i", vids[0],
+             "-frames:v", "1", "-vf", "scale=480:-2", t])
     return t if t.exists() else None
 
 

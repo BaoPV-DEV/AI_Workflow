@@ -229,7 +229,8 @@ class H(SimpleHTTPRequestHandler):
                 return self._json([{"name": f.name, "size": f.stat().st_size, "mtime": int(f.stat().st_mtime)}
                                    for f in sorted(d.iterdir(), key=lambda f: -f.stat().st_mtime) if f.is_file()])
             if u.startswith("/api/p/") and u.endswith("/thumb"):
-                t = studio_api.thumbnail(u.split("/")[3])
+                at = self._q().get("at")
+                t = studio_api.thumbnail(u.split("/")[3], float(at) if at else None)
                 return self._file(t) if t else self._json({"error": "chưa có"}, 404)
             if u.startswith("/tpl/"):
                 return self._file(self._safe(config.TEMPLATES / "html_scenes", u[5:]))

@@ -359,8 +359,8 @@ function renderDetail(e) {
   $('#rdetail').innerHTML = `<div class="card"><div class="ph" style="margin:0 0 4px"><h1 style="font-size:18px">${esc(e.title)}</h1><span class="sp"></span><button class="btn2" onclick="go('editor','${esc(e.id)}')">✏️ Mở trình sửa cảnh</button></div>
       <p class="small muted" style="margin:0 0 14px">${e.scenes} cảnh · ${e.duration ? Math.round(e.duration) + ' giây' : 'chưa đo thời lượng'} · ${e.aspect} · ${esc((META.languages[e.lang] || {}).name || e.lang)}</p>
       <div class="runbar"><button class="btn2" data-step="voice">🎙 Giọng đọc</button><button class="btn2" data-step="draft">⚡ Xuất bản nháp</button><button class="gbtn" data-step="all">🚀 Xuất video</button><span class="st" id="rst"></span></div>
-      ${full || draft ? `<video class="outv" controls src="/files/${esc(e.id)}/out/${esc(full || draft)}?${e.mtime}" style="margin-top:14px"></video>
-        <div class="chips" style="margin-top:10px">${e.videos.map(v => `<a class="btn2" href="/files/${esc(e.id)}/out/${esc(v)}" download>⬇ ${esc(v)}</a>`).join('')}${e.subs.map(l => `<a class="btn2" href="/files/${esc(e.id)}/out/${esc(e.id)}${l === e.lang ? '' : '.' + l}.srt" download>⬇ phụ đề ${esc(l)}</a>`).join('')}</div>` : ''}</div>
+      ${full || draft ? `<video class="outv" id="rvideo" controls src="/files/${esc(e.id)}/out/${esc(full || draft)}?${e.mtime}" style="margin-top:14px"></video>
+        <div class="chips" style="margin-top:10px">${e.videos.map(v => `<a class="btn2" href="/files/${esc(e.id)}/out/${esc(v)}" download>⬇ ${esc(v)}</a>`).join('')}${e.subs.map(l => `<a class="btn2" href="/files/${esc(e.id)}/out/${esc(e.id)}${l === e.lang ? '' : '.' + l}.srt" download>⬇ phụ đề ${esc(l)}</a>`).join('')}<button class="btn2" id="rthumbgo">🖼 Lấy khung này làm ảnh đại diện</button></div>` : ''}</div>
     <div class="grid2" style="margin-top:16px">
       <div class="card"><div class="cap">Phụ đề thêm · chỉ dịch chữ</div><div class="chips" id="rsubs">${chipsHtml(Object.entries(META.languages).filter(([k]) => k !== e.lang).map(([k, v]) => [k, v.name]), [], 'rs')}</div>
         <div class="runbar" style="margin-top:12px"><button class="btn2 pri" id="rsubgo">Tạo phụ đề</button><span class="st" id="rsubst"></span></div>
@@ -383,6 +383,11 @@ function renderDetail(e) {
   });
   const subs = []; bindChips($('#rsubs'), '[data-rs]', () => subs);
   $('#rsubgo').onclick = async () => { if (!subs.length) return toast('Chọn ngôn ngữ', true); if (META.brain.backend === 'manual') return go('settings'); const r = await api(`/api/p/${e.id}/subs`, { method: 'POST', body: { langs: subs } }); watch(r.job, $('#rsubst'), 'Đang dịch phụ đề', j => j.code === 0 && (toast('Đã tạo: ' + j.result.join(', ')), pgRender(e.id))); };
+  if ($('#rthumbgo')) $('#rthumbgo').onclick = async () => {
+    const v = $('#rvideo'), at = v.currentTime || 1.5;
+    await fetch(`/api/p/${e.id}/thumb?at=${at.toFixed(2)}`);
+    toast('Đã cập nhật ảnh đại diện'); pgRender(e.id);
+  };
   $('#rplat').onchange = loadPub;
   $('#rpubgo').onclick = async () => {
     if (META.brain.backend === 'manual') return go('settings');
