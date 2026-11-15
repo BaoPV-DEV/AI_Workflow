@@ -81,7 +81,7 @@
   }
 
   function camera(t) {
-    const d = input.duration || 5, k = clamp(t / d);
+    const d = input.duration || 5, k = ease.inOut(clamp(t / d));
     const cam = input.camera || 'none';
     const m = { zoom_in: `scale(${1 + 0.08 * k})`, zoom_out: `scale(${1.08 - 0.08 * k})`,
       pan_left: `scale(1.06) translateX(${2.5 - 5 * k}%)`, pan_right: `scale(1.06) translateX(${-2.5 + 5 * k}%)` };

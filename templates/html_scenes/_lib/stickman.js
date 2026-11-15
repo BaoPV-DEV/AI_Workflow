@@ -16,17 +16,32 @@
   const mix = (a, b, k) => { const o = {}; for (const key of KEYS) o[key] = lerp(a[key] ?? STAND[key], b[key] ?? STAND[key], k); return o; };
   const full = p => Object.assign({}, STAND, p);
 
-  function sample(action, local) {
+  // Mỗi nhóm hành động có "tính khí" chuyển động riêng thay vì luôn dùng inOut đều đều:
+  // out = bật nhanh rồi chùng (nảy, vui); back = hất quá đà rồi hồi (giật mình, kịch tính);
+  // elastic = đàn hồi (lắc lư); linear = đều tay (đi bộ, làm việc).
+  const ACT_EASE = {
+    jump: 'out', cheer: 'out', celebrate: 'out', clap: 'out', high_five: 'out', thumbs_up: 'out',
+    laugh: 'out', dance: 'out', fall: 'out', push: 'out', fight: 'out',
+    shocked: 'back', scared: 'back', surprised: 'back', facepalm: 'back', head_scratch: 'back',
+    angry: 'back', salute: 'back',
+    walk: 'linear', run: 'linear', sneak: 'linear', work: 'linear', read: 'linear', think: 'linear', sleep: 'linear',
+  };
+  const WALK_ACTS = new Set(['walk', 'run', 'sneak']);
+
+  function sample(action, local, name) {
     const fr = action.frames;
     if (!fr || !fr.length) return { ...STAND };
     if (fr.length === 1) return full(fr[0].pose);
     const total = fr.reduce((s, f) => s + (f.dur || 0.4), 0);
     let x = action.loop ? local % total : Math.min(local, total);
+    const easeFn = ease[ACT_EASE[name]] || ease.inOut;
     for (let i = 0; i < fr.length; i++) {
       const d = fr[i].dur || 0.4;
       if (x <= d || i === fr.length - 1) {
         const nxt = action.loop ? fr[(i + 1) % fr.length] : fr[Math.min(i + 1, fr.length - 1)];
-        return mix(full(fr[i].pose), full(nxt.pose), ease.inOut(clamp(x / d)));
+        const p = mix(full(fr[i].pose), full(nxt.pose), easeFn(clamp(x / d)));
+        if (action.loop && WALK_ACTS.has(name)) p._walk = (x / d + i) / fr.length;
+        return p;
       }
       x -= d;
     }
@@ -193,7 +208,9 @@
       const fk = add(hip, v(p.fl1, L.thigh)), ff = add(fk, v(p.fl2, L.shin));
       const bk = add(bhip, v(p.bl1, L.thigh)), bf = add(bk, v(p.bl2, L.shin));
       const breathe = Math.sin(t * 2.4 + this.seed) * S * 0.004;
-      const lift = Math.max(ff[1], bf[1]) + (p.lift || 0) * S / 160;
+      // nảy bước chân khi đi/chạy: mỗi lần chân chạm nền hạ nhẹ trọng tâm xuống rồi bật lên
+      const walkBob = p._walk !== undefined ? Math.abs(Math.sin(p._walk * Math.PI * 2)) * S * 0.012 : 0;
+      const lift = Math.max(ff[1], bf[1]) + (p.lift || 0) * S / 160 - walkBob;
       const tv = [Math.sin(p.lean * R) * dir, -Math.cos(p.lean * R)];
       const top = [tv[0] * (L.torso + breathe), tv[1] * (L.torso + breathe)];
       const sh = [tv[0] * L.torso * 0.86, tv[1] * L.torso * 0.86];
@@ -204,9 +221,13 @@
       const be = add(bsh, v(p.ba1 + p.lean, L.up)), bh = add(be, v(p.ba2 + p.lean, L.low));
       const pts = (...a) => a.map(q => q.map(n => n.toFixed(1)).join(',')).join(' ');
       const foot = (f, ang) => { const len = S * 0.05; return [f, [f[0] + dir * len * Math.cos(ang * R * 0.3), f[1] - len * 0.05]]; };
-      this.g.setAttribute('transform', `translate(${x.toFixed(1)} ${(ground - lift).toFixed(1)})`);
-      this.shadow.setAttribute('cy', lift.toFixed(1));
-      this.shadow.setAttribute('rx', (S * 0.14 * (1 - (p.lift || 0) / 120)).toFixed(1));
+      // squash & stretch: bật cao thì giãn dọc-co ngang, rơi/đáp đất thì nén dọc-phình ngang (giữ "thể tích")
+      const vlift = clamp(p._vlift || 0, -6, 6);
+      const sStretch = 1 + clamp(vlift * 0.011, -0.06, 0.1);
+      const sSquash = 1 / Math.sqrt(sStretch);
+      this.g.setAttribute('transform', `translate(${x.toFixed(1)} ${(ground - lift).toFixed(1)}) scale(${sSquash.toFixed(3)} ${sStretch.toFixed(3)})`);
+      this.shadow.setAttribute('cy', (lift / sStretch).toFixed(1));
+      this.shadow.setAttribute('rx', (S * 0.14 * (1 - (p.lift || 0) / 120) / sSquash).toFixed(1));
       if (o.seated) {
         const tp = S * 0.02, half = S * 0.11, bx = -dir * S * 0.02;
         this.seat.setAttribute('d', `M${bx - half} ${tp} H${bx + half} M${bx - half * 0.8} ${tp} L${bx - half * 0.9} ${lift} M${bx + half * 0.8} ${tp} L${bx + half * 0.9} ${lift}`);
@@ -340,10 +361,12 @@
     const s = segs[i];
     const k = s.walk ? clamp((t - s.t) / (s.until - s.t)) : 0;
     const act = lib.actions[s.act] || lib.actions.stand;
-    let p = sample(act, t - s.t);
+    let p = sample(act, t - s.t, s.act);
+    const liftPrev = sample(act, t - s.t - 0.04, s.act).lift || 0;
+    p._vlift = ((p.lift || 0) - liftPrev) / 0.04;
     if (i > 0 && t - s.t < 0.3) {
       const prev = segs[i - 1], pa = lib.actions[prev.act] || lib.actions.stand;
-      p = mix(sample(pa, s.t - prev.t), p, ease.inOut((t - s.t) / 0.3));
+      p = { ...mix(sample(pa, s.t - prev.t, prev.act), p, ease.inOut((t - s.t) / 0.3)), _walk: p._walk, _vlift: p._vlift };
     }
     return { p, seated: !!act.seated && !s.walk, x: lerp(s.x0, s.x1, k) * W, face: s.face || 1, mood: s.mood, hold: s.hold, say: s.say, sayT: s.sayT, label: s.label,
       talking: !s.walk && (TALK_ACTS.has(s.act) || !!s.say), idle: !s.walk && !act.loop && !act.seated,
