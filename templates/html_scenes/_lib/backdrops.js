@@ -257,7 +257,6 @@
   B.river = (g, ctx, C) => { const { W, gy, H, u } = ctx; sky(g, ctx, C); sunMoon(g, ctx, C); const cl = clouds(g, ctx, 3); hills(g, ctx, C.green, 160 * u, 0.3); el('rect', { y: gy, width: W, height: H - gy, fill: C.green, opacity: 0.5 }, g); const water = el('rect', { y: gy + (H - gy) * 0.3, width: W, height: (H - gy) * 0.4, fill: '#4fc3f7', opacity: 0.8 }, g); el('path', { d: `M0 ${gy} Q${W / 2} ${gy - 160 * u} ${W} ${gy}`, stroke: C.woodD, 'stroke-width': 18 * u, fill: 'none' }, g); for (let i = 1; i < 10; i++) { const x = W * i / 10, y = gy - 160 * u * 4 * (i / 10) * (1 - i / 10); el('line', { x1: x, y1: y, x2: x, y2: gy, stroke: C.wood, 'stroke-width': 6 * u }, g); } const sh = [0, 1, 2, 3].map(i => el('line', { x1: 0, y1: 0, x2: 60 * u, y2: 0, stroke: '#fff', 'stroke-width': 4 * u, opacity: 0.6 }, g)); return t => { cl(t); sh.forEach((s, i) => s.setAttribute('transform', `translate(${(t * 80 * u + i * W / 4) % W} ${gy + (H - gy) * (0.38 + (i % 2) * 0.15)})`)); }; };
   B.bus = (g, ctx, C) => { const { W, gy, u } = ctx; interior(g, ctx, C, mix(C.wall, '#eceff1', 0.5)); const out = el('g', {}, g); for (let i = 0; i < 4; i++) { const x = W * (0.04 + i * 0.245); el('rect', { x, y: gy - 470 * u, width: W * 0.21, height: 200 * u, rx: 18 * u, fill: C.glass, stroke: C.line, 'stroke-width': 6 * u }, g); } const trees = []; for (let i = 0; i < 8; i++) trees.push(el('circle', { r: 50 * u, fill: C.green, opacity: 0.6 }, out)); el('line', { x1: 0, y1: gy - 520 * u, x2: W, y2: gy - 520 * u, stroke: C.line, 'stroke-width': 6 * u }, g); for (let x = W * 0.1; x < W; x += W * 0.2) el('line', { x1: x, y1: gy - 520 * u, x2: x, y2: gy - 470 * u, stroke: C.line, 'stroke-width': 3 * u }, g); return t => trees.forEach((tr, i) => { tr.setAttribute('cx', W - ((t * 300 * u + i * W / 4) % (W + 100 * u))); tr.setAttribute('cy', gy - 330 * u); }); };
 
-  const NAMES = Object.keys(B);
   function draw(g, name, ctx, frontG) {
     ctx.u = Math.min(ctx.W, ctx.H) / 1080 * (ctx.H > ctx.W ? 1 : 1.25);
     ctx.time = ctx.time || 'day';
@@ -271,9 +270,10 @@
     if (ctx.time === 'night' && !['space', 'stage', 'city_night', 'night'].includes(name)) el('rect', { width: ctx.W, height: ctx.H, fill: '#0b1537', opacity: 0.32 }, back);
     const front = frontG || el('g', { 'pointer-events': 'none' }, g);
     const wx = weather(front, ctx);
-    const dark = ['space', 'stage', 'night', 'city_night'].includes(name) || (ctx.time === 'night' && !['plain', 'studio'].includes(name));
+    const dark = ctx.dark || ['space', 'stage', 'night', 'city_night'].includes(name) || (ctx.time === 'night' && !['plain', 'studio'].includes(name));
     return { update: t => { upd(t); wx(t); }, front, dark };
   }
 
-  VF.backdrops = { draw, NAMES, palette };
+  const H = { sky, stars, sunMoon, clouds, hills, tree, windowPane, interior, shelf, lamp, plant, frame, clock, building, road, mix, rnd, lum };
+  VF.backdrops = { draw, palette, B, H, add: (name, fn) => { B[name] = fn; }, get NAMES() { return Object.keys(B); } };
 })();

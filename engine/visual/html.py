@@ -97,7 +97,7 @@ class HtmlAdapter(Adapter):
     visual_types = ("html_animation", "svg_graphic")
 
     def fingerprint(self, job: Job) -> list:
-        return [template_path(job), LIB / "runtime.js", LIB / "stickman.js", job.style, job.cast]
+        return [template_path(job), *sorted(LIB.glob("*.js")), LIB / "base.css", job.style, job.cast]
 
     def render(self, job: Job) -> Path:
         fps = job.fps if not job.draft else max(12, job.fps // 2)
