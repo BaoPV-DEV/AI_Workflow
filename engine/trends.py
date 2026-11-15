@@ -109,11 +109,91 @@ def youtube_popular(geo: str = "VN", key: str = "", limit: int = 20) -> list[dic
              "url": f"https://youtu.be/{i['id']}"} for i in items]
 
 
+# ---------------------------------------------------------------- làm sạch & phân loại
+BLOCK = re.compile(r"tình dục|khiêu dâm|hiếp|loạn luân|âm hộ|dương vật|giao phối|xxx|porn|\bsex|nude|khỏa thân|"
+                   r"phân xác|giết người|thảm sát|khủng bố|ma túy|tự sát|tự tử|cá độ|soi kèo|xổ số|casino|"
+                   r"diretta|streaming gratis|rojadirecta|xem trực tiếp miễn phí|link xem|xôi lạc|cakhia|90phut|mitom|vebo", re.I)
+SPAM_CTX = re.compile(r"diretta|gratis|rojadirecta|live update|\(\(|\)\)|🔥|[\uff21-\uff3a\uff41-\uff5a]|\[!|%\*", re.I)
+CATS = [  # (mã, tên, nhạy cảm, mẫu)
+    ("politics", "Chính trị – quân sự", True, r"chính trị|bầu cử|quốc hội|bộ trưởng|thủ tướng|tổng bí thư|chủ tịch nước|"
+     r"tổng thống|election|senate|congress|quân sự|chiến sự|chiến tranh|bao vây|tên lửa|xe tăng|bmp-|ukraine|orekhov|lutnick|tô lâm"),
+    ("crime", "Pháp luật", True, r"bị bắt|bắt tạm giam|công an|khởi tố|truy nã|lừa đảo|đa cấp|vụ án|xét xử|\btòa\b|court|lawsuit|"
+     r"arrest|fraud|price fixing|warrant"),
+    ("weather", "Thời tiết – đời sống", False, r"\bbão\b|lũ|mưa|sạt lở|động đất|nắng nóng|rét|thời tiết|triều cường|storm|flood|"
+     r"earthquake|typhoon|weather"),
+    ("sport", "Thể thao", False, r"\bvs\b|đấu với|bóng đá|\bfc\b|\bcup\b|giải đấu|lịch thi đấu|atp|wta|tennis|nba|uefa|fifa|"
+     r"olympic|sea games|cầu thủ|\bhlv\b|v-league|premier league|la liga|real madrid|\bmu\b|zverev|pochettino|nations league"),
+    ("tech", "Công nghệ", False, r"iphone|apple|samsung|\bai\b|chip|nvidia|google|spacex|starship|ứng dụng|\bapp|phần mềm|"
+     r"software|linux|\bpi\b|robot|github|pypi|vulnerab|security|container|runtime|\bkde\b|jensen huang|startup|lovable|basic|"
+     r"programming|code|3d modeller|nes games"),
+    ("science", "Khoa học – lịch sử", False, r"khoa học|vũ trụ|hành tinh|apollo|nasa|lịch sử|history|khủng long|vật lý|sinh học|"
+     r"science|space"),
+    ("ent", "Giải trí", False, r"phim|ca sĩ|show|mùa \d|nhạc|concert|idol|\bvtv\b|\bvtc\b|truyền hình|game|documentary|"
+     r"ca sĩ mặt nạ|bestie|film|movie|music"),
+]
+PERSON = re.compile(r"^[A-ZÀ-Ỹ][\wÀ-ỹ'.-]+( [A-ZÀ-Ỹ][\wÀ-ỹ'.-]+){1,3}( \(.*\))?$")
+ANGLE = {
+    "vi": {"tech": "{t}: có gì mới và hoạt động thế nào?", "sport": "{t}: luật chơi, lịch sử và điều thú vị",
+           "weather": "{t}: vì sao xảy ra và cách giữ an toàn", "ent": "{t}: câu chuyện phía sau",
+           "science": "{t}: giải thích trong 60 giây", "crime": "{t}: dấu hiệu nhận biết và cách phòng tránh",
+           "person": "{t} là ai? Những điều đáng biết", "other": "{t} là gì? Giải thích trong 60 giây"},
+    "en": {"tech": "{t}: what's new and how it works", "sport": "{t}: rules, history and fun facts",
+           "weather": "{t}: why it happens and how to stay safe", "ent": "{t}: the story behind it",
+           "science": "{t} explained in 60 seconds", "crime": "{t}: warning signs and how to avoid it",
+           "person": "Who is {t}? What to know", "other": "What is {t}? Explained in 60 seconds"},
+}
+
+
+def _tokens(t: str) -> set[str]:
+    return {w for w in re.findall(r"\w+", t.lower()) if len(w) > 1 and w not in {"vs", "và", "the", "of", "đấu", "với"}}
+
+
+def clean(items: list[dict], lang: str = "vi") -> tuple[list[dict], int]:
+    """Bỏ nội dung người lớn/bạo lực/rác, gộp trùng, gắn chuyên mục + độ nóng + góc khai thác gợi ý."""
+    out, dropped = [], 0
+    for it in items:
+        ctx = [c for c in (it.get("context") or []) if not SPAM_CTX.search(c) and not BLOCK.search(c)]
+        if BLOCK.search(it["title"]) or (it.get("context") and not ctx and it["source"] == "google_trends"
+                                         and all(SPAM_CTX.search(c) for c in it["context"])):
+            dropped += 1
+            continue
+        text = it["title"] + " " + " ".join(ctx)
+        if it["source"] == "wikipedia" and PERSON.match(it["title"]):
+            cat = ("person", "Nhân vật", True)
+        else:
+            cat = next(((c, n, sens) for c, n, sens, pat in CATS if re.search(pat, text, re.I)), ("other", "Khác", False))
+        toks = _tokens(it["title"])
+        dup = next((o for o in out if toks and len(toks & o["_t"]) / max(1, min(len(toks), len(o["_t"]))) >= 0.6), None)
+        if dup:
+            dup["score"] = max(dup["score"], it["score"])
+            dup["context"] = (dup["context"] + ctx)[:3]
+            continue
+        tpl = ANGLE.get(lang.split("-")[0], ANGLE["en"])
+        title = it["title"][:1].upper() + it["title"][1:]
+        if it["source"] == "hacker_news" and not lang.startswith("en"):
+            angle = f"Giải thích dễ hiểu: {title}"
+        elif cat[0] == "politics":
+            angle = None
+        else:
+            angle = tpl.get(cat[0], tpl["other"]).format(t=title)
+        out.append({**it, "title": title, "context": ctx[:3], "category": cat[0], "category_name": cat[1], "sensitive": cat[2],
+                    "angle": angle, "_t": toks})
+    import math
+    for src in {o["source"] for o in out}:
+        mx = max((o["score"] for o in out if o["source"] == src), default=1) or 1
+        for o in out:
+            if o["source"] == src:
+                o["heat"] = max(6, round(100 * math.sqrt(o["score"] / mx)))
+    for o in out:
+        o.pop("_t", None)
+    return out, dropped
+
+
 def collect(geo: str = "VN", lang: str = "vi", sources: list[str] | None = None, fresh: bool = False) -> dict:
     """Gom từ mọi nguồn. Nguồn lỗi được ghi vào 'errors', không làm hỏng cả lượt."""
     sources = sources or ["google", "wikipedia", "hackernews", "youtube"]
     cache_file = config.workspace() / ".trends_cache.json"
-    key = f"{geo}|{lang}|{','.join(sources)}"
+    key = f"v2|{geo}|{lang}|{','.join(sources)}"
     try:
         cache = json.loads(cache_file.read_text(encoding="utf-8"))
     except Exception:
@@ -129,7 +209,8 @@ def collect(geo: str = "VN", lang: str = "vi", sources: list[str] | None = None,
             items += jobs[s]()
         except Exception as e:
             errors[s] = f"{type(e).__name__}: {e}"
-    res = {"ts": time.time(), "geo": geo, "lang": lang, "items": items, "errors": errors,
+    items, dropped = clean(items, lang)
+    res = {"ts": time.time(), "geo": geo, "lang": lang, "items": items, "errors": errors, "dropped": dropped,
            "fetched": dt.datetime.now().strftime("%Y-%m-%d %H:%M")}
     if items:
         cache[key] = res
@@ -143,7 +224,8 @@ def compact(items: list[dict], limit: int = 40) -> str:
     rows = []
     for i, t in enumerate(items[:limit], 1):
         ctx = " | ".join(t.get("context") or [])[:160]
-        rows.append(f"{i}. [{t['source']}] {t['title']} ({t.get('traffic', '')}){' — ' + ctx if ctx else ''}")
+        flag = " ⚠nhạy cảm" if t.get("sensitive") else ""
+        rows.append(f"{i}. [{t['source']}·{t.get('category', '')}{flag}] {t['title']} ({t.get('traffic', '')}){' — ' + ctx if ctx else ''}")
     return "\n".join(rows)
 
 

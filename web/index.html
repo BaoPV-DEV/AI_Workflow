@@ -146,10 +146,32 @@ dialog::backdrop { background: #1c233066; }
 .brainchip { font-size: 12.5px; padding: 4px 10px; border-radius: 20px; }
 .brainchip.ok { border-color: #bfe5d3; background: #effaf5; color: #136b48; }
 .brainchip.no { border-color: #f3d29a; background: #fff7e8; color: #8a5a00; }
-.trend { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
-.trend:hover { background: var(--soft); border-color: var(--line); }
-.trend .t { font-weight: 600; } .trend .src { font-size: 11.5px; color: var(--mute); text-align: right; }
-.trend .ctx { grid-column: 1 / -1; font-size: 12.5px; color: var(--mute); }
+ dialog.wide { width: min(1080px, 96vw); }
+.aibar { display: flex; gap: 16px; align-items: center; background: linear-gradient(120deg, #eef2fe, #f6f0ff); border: 1px solid #d9e2fb; border-radius: 12px; padding: 14px 16px; margin: 14px 0 12px; }
+.aibar h4 { margin: 0 0 2px; font-size: 15px; } .aibar p { margin: 0; color: var(--mute); font-size: 13px; }
+.aibar select { width: auto; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+.chip { border-radius: 20px; padding: 4px 11px; font-size: 12.5px; background: var(--panel); }
+.chip.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+.chip b { font-weight: 600; opacity: .6; margin-left: 3px; }
+.tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.tcard { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 12px 13px 11px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); transition: border-color .15s, box-shadow .15s; }
+.tcard:hover { border-color: #aebcf2; box-shadow: 0 6px 18px #2f5bea14; }
+.tcard.sens { background: #fffafa; border-style: dashed; }
+.tcard .top { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--mute); }
+.pill { border-radius: 20px; padding: 1px 8px; font-weight: 600; font-size: 11.5px; color: #fff; }
+.tcard .tt { font-weight: 700; font-size: 15px; line-height: 1.3; cursor: pointer; }
+.tcard .tt:hover { color: var(--pri); }
+.heat { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--mute); }
+.heat i { flex: 1; height: 5px; border-radius: 3px; background: var(--soft); overflow: hidden; display: block; }
+.heat i span { display: block; height: 100%; background: linear-gradient(90deg, #ffc857, #f2711c); border-radius: 3px; }
+.tcard .cx { font-size: 12.5px; color: var(--mute); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tcard .ang { font-size: 13px; background: var(--soft); border-radius: 8px; padding: 6px 9px; }
+.tcard .ang em { color: var(--mute); font-style: normal; font-size: 11.5px; display: block; }
+.tcard .act { display: flex; gap: 6px; margin-top: auto; padding-top: 2px; }
+.tcard .act button { font-size: 12.5px; padding: 4px 10px; }
+.tcard .warn { font-size: 12px; color: #a33; }
+.tnote { font-size: 12.5px; color: var(--mute); margin: 10px 2px 0; }
 .idea { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin: 8px 0; }
 .idea h4 { margin: 0 0 4px; font-size: 15px; }
 .idea .sc { float: right; font-weight: 700; color: var(--pri); }
@@ -236,14 +258,15 @@ kbd { font: 11px var(--mono); border: 1px solid #4a5363; border-bottom-width: 2p
 <dialog id="dlgNew"><div class="dhead"><h3>Tạo video mới</h3><button class="ghost" onclick="dlgNew.close()">Đóng</button></div>
   <div class="tabs" style="margin:0;padding:0 14px" role="tablist"><button class="tab on" data-nt="topic" onclick="newTab('topic')">Tự nhập chủ đề</button><button class="tab" data-nt="hot" onclick="newTab('hot')">Chủ đề đang hot</button></div>
   <div class="dbody" id="ntHot" hidden>
-    <div class="row" style="margin-top:12px">
+    <div class="aibar">
+      <div style="flex:1"><h4>Để AI chọn giúp</h4><p>AI đọc các xu hướng bên dưới, bỏ chủ đề rủi ro và đề xuất ý tưởng video kèm câu mở đầu.</p></div>
       <select id="tgeo" aria-label="Quốc gia"></select>
-      <button style="flex:none" onclick="loadTrends(true)">Tải lại</button>
-      <button class="pri" style="flex:none" onclick="aiIdeas()">AI chọn ý tưởng</button>
+      <button class="pri" onclick="aiIdeas()">AI chọn ý tưởng</button>
     </div>
-    <p class="hint" id="trendInfo">Nguồn: Google Trends, Wikipedia, Hacker News. Bấm một chủ đề để dùng, hoặc để AI lọc và biến thành ý tưởng video an toàn, dễ giải thích.</p>
     <div id="ideaList"></div>
-    <div id="trendList"></div>
+    <div class="filters" id="tfilters"></div>
+    <div class="tgrid" id="trendList"></div>
+    <p class="tnote" id="trendInfo"></p>
     <div class="way" style="margin-top:14px"><h4>Tự động làm cả loạt</h4>
       <p class="hint" style="margin:0 0 8px">AI chọn ý tưởng tốt nhất, viết kịch bản, tạo giọng và xuất video. Cần Claude Code hoặc API key.</p>
       <div class="row" style="align-items:flex-start"><div style="flex:0 0 110px"><label for="acount" style="margin-top:0">Số video</label><input id="acount" type="number" min="1" max="10" value="2"></div>
@@ -786,18 +809,53 @@ function seg(el, options, current, onPick) {
 function newTab(k) {
   document.querySelectorAll('[data-nt]').forEach(b => b.classList.toggle('on', b.dataset.nt === k));
   $('#ntHot').hidden = k !== 'hot'; $('#ntTopic').hidden = k !== 'topic';
+  dlgNew.classList.toggle('wide', k === 'hot');
   document.querySelector('#dlgNew .dfoot').hidden = k !== 'topic';
   if (k === 'hot' && !$('#trendList').innerHTML) loadTrends(false);
 }
 const geoLang = () => ({ VN: 'vi', JP: 'ja', KR: 'ko', TH: 'th', ID: 'id', BR: 'pt', DE: 'de', FR: 'fr', ES: 'es', MX: 'es', RU: 'ru', TW: 'zh', IN: 'hi' }[$('#tgeo').value] || 'en');
+const CAT = { sport: ['Thể thao', '#1f9d6b'], tech: ['Công nghệ', '#2f5bea'], weather: ['Thời tiết – đời sống', '#0e8fa8'], ent: ['Giải trí', '#c2410c'],
+  science: ['Khoa học – lịch sử', '#7c3aed'], person: ['Nhân vật', '#a16207'], crime: ['Pháp luật', '#b42318'], politics: ['Chính trị – quân sự', '#b42318'], other: ['Khác', '#687284'] };
+const SRC = { google_trends: 'Google Trends', wikipedia: 'Wikipedia', hacker_news: 'Hacker News', youtube: 'YouTube' };
+let TR = { items: [], cat: 'all', src: 'all', sens: false };
 async function loadTrends(fresh) {
-  $('#trendList').innerHTML = '<p class="hint">Đang tải xu hướng…</p>';
+  $('#trendList').innerHTML = '<p class="hint">Đang tải xu hướng…</p>'; $('#tfilters').innerHTML = '';
   const r = await api(`/api/trends?geo=${$('#tgeo').value}&lang=${geoLang()}${fresh ? '&fresh=1' : ''}`);
+  TR.items = r.items || []; TR.meta = r;
+  renderTrends();
+}
+function renderTrends() {
+  const r = TR.meta || {}, all = TR.items;
+  const safe = all.filter(t => !t.sensitive), nSens = all.length - safe.length;
+  const base = TR.sens ? all : safe;
+  const count = k => base.filter(t => k === 'all' || t.category === k).length;
+  const cats = ['all', ...Object.keys(CAT).filter(k => base.some(t => t.category === k))];
+  const srcs = ['all', ...new Set(base.map(t => t.source))];
+  $('#tfilters').innerHTML = cats.map(k => `<button class="chip ${TR.cat === k ? 'on' : ''}" data-cat="${k}">${k === 'all' ? 'Tất cả' : CAT[k][0]}<b>${count(k)}</b></button>`).join('') +
+    '<span style="width:10px"></span>' + srcs.map(k => `<button class="chip ${TR.src === k ? 'on' : ''}" data-src="${k}">${k === 'all' ? 'Mọi nguồn' : SRC[k] || k}</button>`).join('') +
+    `<span class="sp"></span><label class="check" style="margin:0;font-size:12.5px"><input type="checkbox" id="tsens" ${TR.sens ? 'checked' : ''}> Hiện chủ đề nhạy cảm (${nSens})</label>
+     <button class="chip" onclick="loadTrends(true)" title="Lấy dữ liệu mới">Tải lại</button>`;
+  $('#tfilters').querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { TR.cat = b.dataset.cat; renderTrends(); });
+  $('#tfilters').querySelectorAll('[data-src]').forEach(b => b.onclick = () => { TR.src = b.dataset.src; renderTrends(); });
+  $('#tsens').onchange = e => { TR.sens = e.target.checked; renderTrends(); };
+  const list = base.filter(t => (TR.cat === 'all' || t.category === TR.cat) && (TR.src === 'all' || t.source === TR.src))
+    .sort((a, b) => (a.sensitive - b.sensitive) || (b.heat - a.heat));
+  $('#trendList').innerHTML = list.map(t => {
+    const c = CAT[t.category] || CAT.other, i = all.indexOf(t);
+    return `<div class="tcard ${t.sensitive ? 'sens' : ''}">
+      <div class="top"><span class="pill" style="background:${c[1]}">${c[0]}</span><span>${SRC[t.source] || t.source}</span></div>
+      <div class="tt" data-raw="${i}" title="Dùng nguyên chủ đề này">${esc(t.title)}</div>
+      <div class="heat"><i><span style="width:${t.heat || 5}%"></span></i>${esc(t.traffic)}</div>
+      ${t.context?.length ? `<div class="cx">${esc(t.context[0])}</div>` : ''}
+      ${t.sensitive ? `<div class="warn">Chủ đề nhạy cảm: AI sẽ tránh hoặc chỉ khai thác góc kiến thức an toàn.</div>` : ''}
+      ${t.angle ? `<div class="ang"><em>Gợi ý góc làm video</em>${esc(t.angle)}</div>` : ''}
+      <div class="act">${t.angle ? `<button class="pri" data-ang="${i}">Làm video theo gợi ý</button>` : ''}<button data-raw="${i}">Dùng chủ đề</button>${t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener"><button>Nguồn</button></a>` : ''}</div>
+    </div>`;
+  }).join('') || '<p class="hint">Không có chủ đề trong bộ lọc này.</p>';
+  $('#trendList').querySelectorAll('[data-raw]').forEach(el => el.onclick = () => { const t = all[+el.dataset.raw]; useTopic(t.title + (t.context?.length ? ` (bối cảnh: ${t.context[0]})` : '')); });
+  $('#trendList').querySelectorAll('[data-ang]').forEach(el => el.onclick = () => { const t = all[+el.dataset.ang]; useTopic(t.angle + (t.context?.length ? ` (bối cảnh: ${t.context[0]})` : ''), { sport: 'motion_graphic', tech: 'explainer', weather: 'explainer', science: 'explainer', crime: 'animation' }[t.category]); });
   const errs = Object.keys(r.errors || {});
-  $('#trendInfo').textContent = `Lấy lúc ${r.fetched || '—'} · ${r.items?.length || 0} chủ đề` + (errs.length ? ` · không tải được: ${errs.join(', ')}` : '') + '. Bấm một chủ đề để dùng.';
-  const SRC = { google_trends: 'Google Trends', wikipedia: 'Wikipedia', hacker_news: 'Hacker News', youtube: 'YouTube' };
-  $('#trendList').innerHTML = (r.items || []).slice(0, 60).map((t, i) => `<div class="trend" data-i="${i}"><span class="t">${esc(t.title)}</span><span class="src">${SRC[t.source] || t.source}<br>${esc(t.traffic)}</span>${t.context?.length ? `<span class="ctx">${esc(t.context.join(' · '))}</span>` : ''}</div>`).join('') || '<p class="hint">Không có dữ liệu. Kiểm tra internet rồi bấm Tải lại.</p>';
-  $('#trendList').querySelectorAll('.trend').forEach(el => el.onclick = () => { const t = r.items[+el.dataset.i]; useTopic(t.title + (t.context?.length ? ` (bối cảnh: ${t.context[0]})` : '')); });
+  $('#trendInfo').textContent = `Cập nhật ${r.fetched || '—'} · ${all.length} chủ đề` + (r.dropped ? ` · đã ẩn ${r.dropped} mục người lớn, bạo lực hoặc link xem lậu` : '') + (errs.length ? ` · không tải được: ${errs.map(e => SRC[e] || e).join(', ')}` : '') + '. Nguồn: Google Trends, Wikipedia, Hacker News.';
 }
 function useTopic(topic, genre) {
   $('#ntopic').value = topic; if (genre) { NEW.genre = genre; seg($('#ngenre'), GENRES, NEW.genre, k => NEW.genre = k); }
@@ -813,10 +871,10 @@ async function aiIdeas() {
     if (!j.done) return setTimeout(wait, 1000);
     if (j.code !== 0) { $('#ideaList').innerHTML = `<div class="errbox">${esc(j.log)}</div>`; return; }
     const ideas = j.result.ideas || [];
-    $('#ideaList').innerHTML = '<h4 style="margin:12px 0 0">Ý tưởng AI đề xuất</h4>' + ideas.map((x, i) => `<div class="idea"><span class="sc">${x.score}/10</span><h4>${esc(x.title || x.topic)}</h4>
+    $('#ideaList').innerHTML = '<h4 style="margin:4px 0 0">Ý tưởng AI đề xuất</h4><div class="tgrid" style="margin-bottom:16px">' + ideas.map((x, i) => `<div class="idea"><span class="sc">${x.score}/10</span><h4>${esc(x.title || x.topic)}</h4>
       <div class="hint">${esc(GENRES[x.genre] || x.genre)} · <span class="risk-${x.risk}">rủi ro ${({ low: 'thấp', medium: 'vừa', high: 'cao' })[x.risk] || '?'}</span>${x.trend ? ' · từ xu hướng: ' + esc(x.trend) : ''}</div>
       <p style="margin:6px 0">${esc(x.hook || '')}</p>${x.why_now ? `<div class="hint">${esc(x.why_now)}</div>` : ''}
-      <div class="row" style="margin-top:8px"><span></span><button style="flex:none" data-i="${i}">Làm video này</button></div></div>`).join('');
+      <div class="row" style="margin-top:8px"><span></span><button class="pri" style="flex:none" data-i="${i}">Làm video này</button></div></div>`).join('') + '</div>';
     $('#ideaList').querySelectorAll('button[data-i]').forEach(b => b.onclick = () => { const x = ideas[+b.dataset.i]; useTopic(x.topic + (x.hook ? `. Hook: ${x.hook}` : '') + (x.angle ? `. Góc: ${x.angle}` : ''), x.genre); });
   };
   wait();
