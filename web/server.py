@@ -12,7 +12,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from engine import align, catalog, config, manifest, pipeline
+from engine import align, catalog, config, manifest, pipeline, studio_api
 
 WEB = Path(__file__).parent
 JOBS: dict[str, dict] = {}
@@ -134,6 +134,22 @@ class H(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _q(self) -> dict:
+        from urllib.parse import parse_qs
+        return {k: v[0] for k, v in parse_qs(urlparse(self.path).query).items()}
+
+    def do_DELETE(self):
+        u = urlparse(self.path).path
+        try:
+            if u.startswith("/api/p/"):
+                studio_api.delete_project(u.split("/")[3])
+                return self._json({"ok": True})
+            if u == "/api/series":
+                return self._json(studio_api.series_delete(self._q().get("name", "")))
+            return self._json({"error": "không có"}, 404)
+        except Exception as e:
+            return self._json({"error": f"{type(e).__name__}: {e}"}, 500)
+
     def _body(self) -> dict:
         n = int(self.headers.get("Content-Length") or 0)
         return json.loads(self.rfile.read(n) or b"{}")
@@ -150,6 +166,31 @@ class H(SimpleHTTPRequestHandler):
         try:
             if u in ("/", "/index.html"):
                 return self._file(WEB / "index.html")
+            if u.startswith("/web/"):
+                return self._file(self._safe(WEB, u[5:]))
+            if u == "/api/home":
+                return self._json(studio_api.home())
+            if u == "/api/library":
+                return self._json(studio_api.library())
+            if u == "/api/plan":
+                return self._json(studio_api.plan_get())
+            if u == "/api/research/saved":
+                return self._json(studio_api.research_saved())
+            if u == "/api/research/file":
+                return self._json(studio_api.research_load(self._q().get("name", "")))
+            if u == "/api/settings":
+                return self._json({"values": studio_api.settings_get(), "brain": brain(), "styles": config.list_styles(),
+                                   "root": str(config.ROOT)})
+            if u == "/api/gpu":
+                url = config.settings().get("visual", {}).get("comfyui_url", "")
+                return self._json({"url": url, **studio_api.gpu_ping(url), "workflows": studio_api.workflows()})
+            if u == "/api/tools/files":
+                d = studio_api.tools_dir()
+                return self._json([{"name": f.name, "size": f.stat().st_size, "mtime": int(f.stat().st_mtime)}
+                                   for f in sorted(d.iterdir(), key=lambda f: -f.stat().st_mtime) if f.is_file()])
+            if u.startswith("/api/p/") and u.endswith("/thumb"):
+                t = studio_api.thumbnail(u.split("/")[3])
+                return self._file(t) if t else self._json({"error": "chưa có"}, 404)
             if u.startswith("/tpl/"):
                 return self._file(self._safe(config.TEMPLATES / "html_scenes", u[5:]))
             if u.startswith("/files/"):
@@ -162,7 +203,9 @@ class H(SimpleHTTPRequestHandler):
                                    "characters": config.library("characters")["characters"],
                                    "moods": MOODS, "moves": MOVES, "holds": HOLDS,
                                    "voices": config.settings().get("tts", {}).get("voices", {}),
-                                   "languages": config.library("languages")["languages"], "brain": brain()})
+                                   "languages": config.library("languages")["languages"], "brain": brain(),
+                                   "presets": config.library("presets")["presets"],
+                                   "platforms": config.library("presets")["platforms"]})
             if u == "/api/projects":
                 out = []
                 for m in sorted(config.workspace().glob("*/" + manifest.MANIFEST), key=lambda p: -p.stat().st_mtime):
@@ -209,6 +252,19 @@ class H(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         u = urlparse(self.path).path
+        if u == "/api/upload":
+            name = Path(self._q().get("name", "file")).name
+            n = int(self.headers.get("Content-Length") or 0)
+            dest = studio_api.tools_dir() / name
+            with dest.open("wb") as f:
+                left = n
+                while left > 0:
+                    chunk = self.rfile.read(min(1 << 20, left))
+                    if not chunk:
+                        break
+                    f.write(chunk)
+                    left -= len(chunk)
+            return self._json({"name": name})
         b = self._body()
         try:
             if u.startswith("/api/p/") and u.endswith("/run"):
@@ -230,6 +286,53 @@ class H(SimpleHTTPRequestHandler):
                     if b.get(k):
                         args += [f"--{k}", b[k]]
                 return self._json({"job": run_job(args)})
+            if u == "/api/series":
+                return self._json(studio_api.series_add(b.get("name", "").strip()))
+            if u == "/api/plan":
+                return self._json(studio_api.plan_set(b.get("items", [])))
+            if u == "/api/research":
+                from engine import trends
+                return self._json({"job": run_fn(trends.research, b.get("markets") or ["vi"], b.get("window", "30 ngày qua"),
+                                                 b.get("format", "Video dài + Shorts"), int(b.get("count", 8)),
+                                                 b.get("niche", ""), bool(b.get("fresh")))})
+            if u == "/api/write":
+                from engine.agent.director import plan
+                kw = {k: b.get(k) for k in ("style", "aspect", "lang", "tone", "series", "platforms", "subtitle_langs", "burn_captions")}
+                kw["seconds"] = int(float(b.get("minutes") or 1) * 60)
+                kw["notes"] = " ".join(x for x in (b.get("preset_notes"), b.get("extra")) if x)
+
+                def write_job():
+                    d, errs = plan(b["topic"], genre=b.get("genre") or "explainer", **{k: v for k, v in kw.items() if v not in (None, "", [])})
+                    return {"project_id": d.name, "errors": errs}
+                return self._json({"job": run_fn(write_job)})
+            if u == "/api/narration":
+                from engine import narration
+                from engine.agent.director import new_project
+                data = narration.build(b["text"], b.get("title", ""), b.get("lang") or "vi", b.get("aspect") or "9:16",
+                                       b.get("style") or None)
+                if b.get("series"):
+                    data["series"] = b["series"]
+                d = new_project(data, b.get("title") or None)
+                return self._json({"project_id": d.name, "scenes": len(data["scenes"]), "errors": manifest.validate(data)})
+            if u.startswith("/api/p/") and u.endswith("/publish"):
+                return self._json({"job": run_fn(studio_api.publish_pack, u.split("/")[3], b.get("platform", "YouTube"))})
+            if u.startswith("/api/p/") and u.endswith("/subs"):
+                return self._json({"job": run_fn(studio_api.extra_subtitles, u.split("/")[3], b.get("langs", []))})
+            if u.startswith("/api/p/") and u.endswith("/series"):
+                d, data = manifest.load(u.split("/")[3])
+                if b.get("series"):
+                    data["series"] = b["series"]
+                else:
+                    data.pop("series", None)
+                manifest.save(d, data)
+                return self._json({"ok": True})
+            if u == "/api/tools/run":
+                return self._json({"job": run_fn(studio_api.tool_run, b["kind"], b["src"], b.get("opt", {}))})
+            if u == "/api/gpu":
+                studio_api.settings_set({"visual.comfyui_url": b.get("url", "")})
+                return self._json(studio_api.gpu_ping(b.get("url", "")))
+            if u == "/api/settings":
+                return self._json(studio_api.settings_set(b.get("values", {})))
             if u == "/api/ideas":
                 from engine.agent.director import ideas
                 return self._json({"job": run_fn(ideas, b.get("geo", "VN"), b.get("lang", "vi"), int(b.get("count", 6)),

@@ -89,6 +89,12 @@ def plan(topic: str, genre: str = "animation", project_id: str | None = None, **
     from .llm import complete_json
 
     facts = kw.pop("facts", None)
+    extra = {k: kw.pop(k) for k in ("series", "platforms", "subtitle_langs", "burn_captions") if k in kw}
+    tone = kw.pop("tone", None)
+    if tone:
+        kw["notes"] = (kw.get("notes") or "") + f" Giọng văn / khán giả: {tone}."
+    if extra.get("platforms"):
+        kw["notes"] = (kw.get("notes") or "") + f" Đăng lên: {', '.join(extra['platforms'])}."
     static, user = build_prompt(topic, genre=genre, **kw)
     if facts:
         user += f"- Sự thật cần kiểm chứng trước khi viết (tra web nếu có thể): {facts}\n"
@@ -105,6 +111,10 @@ def plan(topic: str, genre: str = "animation", project_id: str | None = None, **
 
     data = complete_json("plan", static, user, authored_schema(), "submit_manifest", web=True, repair=check)
     fill(data)
+    for k, v in extra.items():
+        if v not in (None, "", []):
+            data[k] = v
+    data.setdefault("source", "ai")
     errs = check(data)
     d = new_project(data, project_id or slugify(topic))
     return d, errs

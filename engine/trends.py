@@ -255,3 +255,78 @@ def ideas_prompt(trend_text: str, count: int, lang: str, genre: str | None, nich
             f"- Ngôn ngữ video: {lang}\n- Thể loại ưu tiên: {genre or 'tự chọn'}\n- Style hợp lệ: {styles}\n"
             + (f"- Kênh chuyên về: {niche}\n" if niche else ""))
     return system, user
+
+
+# ======================================================================
+#  Nghiên cứu chủ đề (trang "Chủ đề thịnh hành"): nguồn miễn phí + Claude tra web,
+#  chấm điểm nhu cầu / cạnh tranh / độ hợp / độ bền / an toàn, sự kiện sắp tới. Cache 12 giờ.
+# ======================================================================
+RESEARCH_SCHEMA = {
+    "type": "object", "required": ["topics"],
+    "properties": {
+        "topics": {"type": "array", "items": {"type": "object", "required": ["title", "score"], "properties": {
+            "title": {"type": "string", "description": "tiêu đề video (ngôn ngữ thị trường chính)"},
+            "topic": {"type": "string", "description": "chủ đề đầu vào để viết kịch bản"},
+            "hook": {"type": "string"}, "angle": {"type": "string"},
+            "why": {"type": "string", "description": "vì sao đang lên, kèm dữ kiện"},
+            "markets": {"type": "array", "items": {"type": "string"}},
+            "score": {"type": "number", "description": "điểm tổng 0-10"},
+            "scores": {"type": "object", "properties": {k: {"type": "number"} for k in
+                       ("demand", "competition", "fit", "evergreen", "safety")}},
+            "rising": {"type": "boolean"}, "risk": {"enum": ["low", "medium", "high"]},
+            "ad_friendly": {"type": "boolean"},
+            "format": {"type": "string", "description": "vd 'Dài + Shorts', 'Shorts'"},
+            "minutes": {"type": "number"}, "genre": {"enum": ["animation", "motion_graphic", "news", "explainer"]},
+            "keywords": {"type": "array", "items": {"type": "string"}},
+            "shorts": {"type": "array", "items": {"type": "string"}, "description": "2-3 ý Shorts cắt từ video"},
+            "sources": {"type": "array", "items": {"type": "string"}}}}},
+        "events": {"type": "array", "items": {"type": "object", "properties": {
+            "date": {"type": "string"}, "title": {"type": "string"}, "note": {"type": "string"},
+            "langs": {"type": "array", "items": {"type": "string"}}}}}}}
+
+
+def research_dir():
+    d = config.workspace() / "_research"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def research(markets: list[str], window: str = "30 ngày qua", fmt: str = "Video dài + Shorts", count: int = 8,
+             niche: str = "", fresh: bool = False) -> dict:
+    import hashlib
+    from .agent.llm import complete_json
+
+    key = hashlib.sha1(json.dumps([sorted(markets), window, fmt, count, niche.strip().lower()]).encode()).hexdigest()[:10]
+    for f in sorted(research_dir().glob(f"*_{key}.json"), reverse=True):
+        if not fresh and time.time() - f.stat().st_mtime < 12 * 3600:
+            data = json.loads(f.read_text(encoding="utf-8"))
+            data["cached"] = True
+            return data
+    langs = config.library("languages")["languages"]
+    blocks = []
+    for m in markets[:5]:
+        info = langs.get(m, {})
+        try:
+            t = collect(info.get("geo", "US"), m)
+            blocks.append(f"## Thị trường {info.get('name', m)} ({m}, {info.get('geo', '')})\n" +
+                          compact([x for x in t["items"] if not x.get("sensitive")], 25))
+        except Exception as e:
+            blocks.append(f"## {m}: không lấy được xu hướng miễn phí ({e})")
+    system = [(config.CONFIG / "prompts" / "ideas.md").read_text(encoding="utf-8"),
+              "NGHIÊN CỨU: dùng công cụ tìm kiếm web để kiểm tra chủ đề nào đang thực sự lên trong khoảng thời gian yêu cầu "
+              "ở từng thị trường (tin khoa học, khám phá, ngày lễ, sự kiện sắp tới…), không chỉ dựa vào danh sách bên dưới. "
+              "Chấm điểm từng tiêu chí 0-10: demand (nhu cầu tìm kiếm), competition (10 = ít cạnh tranh), fit (làm được bằng "
+              "hình tự vẽ/người que/motion graphics, KHÔNG cần cảnh phim, nhạc, thể thao, logo), evergreen (độ bền), safety "
+              "(an toàn bản quyền & quảng cáo). score = trung bình có trọng số. Có góc nhìn riêng để kênh không bị coi là nội "
+              "dung lặp lại, sản xuất hàng loạt. Thêm events: các mốc 4-8 tuần tới có thể làm video (ghi rõ điều chưa kiểm chứng)."]
+    user = (f"Thị trường: {', '.join(markets)} · Khoảng thời gian: {window} · Định dạng: {fmt} · Số chủ đề: {count}\n"
+            + (f"Hướng kênh / ngách: {niche}\n" if niche else "")
+            + f"Hôm nay: {dt.date.today():%Y-%m-%d}\n\nXU HƯỚNG MIỄN PHÍ (tham khảo):\n" + "\n\n".join(blocks))
+    data = complete_json("ideas", system, user, RESEARCH_SCHEMA, "submit_research", web=True)
+    data["topics"] = sorted(data.get("topics", []), key=lambda x: -float(x.get("score") or 0))
+    data.update({"query": {"markets": markets, "window": window, "format": fmt, "count": count, "niche": niche},
+                 "created": dt.datetime.now().strftime("%Y-%m-%d %H:%M")})
+    f = research_dir() / f"{dt.datetime.now():%Y%m%d_%H%M}_{key}.json"
+    f.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+    data["file"] = f.name
+    return data

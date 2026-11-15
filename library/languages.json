@@ -1,19 +1,164 @@
 {
-  "_doc": "Ngôn ngữ hỗ trợ: giọng edge-tts (miễn phí, cần internet), mã gTTS dự phòng, có dấu cách giữa các từ hay không (ảnh hưởng phụ đề).",
-  "languages": {
-    "vi": {"name": "Tiếng Việt", "gtts": "vi", "voices": {"vi-VN-HoaiMyNeural": "Nữ – Hoài My", "vi-VN-NamMinhNeural": "Nam – Nam Minh"}},
-    "en": {"name": "English (US)", "gtts": "en", "voices": {"en-US-AndrewNeural": "Male – Andrew", "en-US-AvaNeural": "Female – Ava", "en-US-BrianNeural": "Male – Brian", "en-US-EmmaNeural": "Female – Emma"}},
-    "en-GB": {"name": "English (UK)", "gtts": "en", "voices": {"en-GB-RyanNeural": "Male – Ryan", "en-GB-SoniaNeural": "Female – Sonia"}},
-    "ja": {"name": "日本語", "gtts": "ja", "nospace": true, "voices": {"ja-JP-NanamiNeural": "女性 – Nanami", "ja-JP-KeitaNeural": "男性 – Keita"}},
-    "ko": {"name": "한국어", "gtts": "ko", "voices": {"ko-KR-SunHiNeural": "여성 – SunHi", "ko-KR-InJoonNeural": "남성 – InJoon"}},
-    "zh": {"name": "中文 (普通话)", "gtts": "zh-CN", "nospace": true, "voices": {"zh-CN-XiaoxiaoNeural": "女 – 晓晓", "zh-CN-YunxiNeural": "男 – 云希"}},
-    "th": {"name": "ไทย", "gtts": "th", "nospace": true, "voices": {"th-TH-PremwadeeNeural": "หญิง – Premwadee", "th-TH-NiwatNeural": "ชาย – Niwat"}},
-    "id": {"name": "Bahasa Indonesia", "gtts": "id", "voices": {"id-ID-GadisNeural": "Perempuan – Gadis", "id-ID-ArdiNeural": "Laki-laki – Ardi"}},
-    "es": {"name": "Español", "gtts": "es", "voices": {"es-ES-ElviraNeural": "Mujer – Elvira", "es-MX-JorgeNeural": "Hombre – Jorge (MX)"}},
-    "pt": {"name": "Português (BR)", "gtts": "pt", "voices": {"pt-BR-FranciscaNeural": "Mulher – Francisca", "pt-BR-AntonioNeural": "Homem – Antonio"}},
-    "fr": {"name": "Français", "gtts": "fr", "voices": {"fr-FR-DeniseNeural": "Femme – Denise", "fr-FR-HenriNeural": "Homme – Henri"}},
-    "de": {"name": "Deutsch", "gtts": "de", "voices": {"de-DE-KatjaNeural": "Frau – Katja", "de-DE-ConradNeural": "Mann – Conrad"}},
-    "hi": {"name": "हिन्दी", "gtts": "hi", "voices": {"hi-IN-SwaraNeural": "महिला – Swara", "hi-IN-MadhurNeural": "पुरुष – Madhur"}},
-    "ru": {"name": "Русский", "gtts": "ru", "voices": {"ru-RU-SvetlanaNeural": "Женщина – Svetlana", "ru-RU-DmitryNeural": "Мужчина – Dmitry"}}
+ "_doc": "Ngôn ngữ hỗ trợ: giọng edge-tts (miễn phí, cần internet), mã gTTS dự phòng, có dấu cách giữa các từ hay không (ảnh hưởng phụ đề).",
+ "languages": {
+  "vi": {
+   "name": "Tiếng Việt",
+   "gtts": "vi",
+   "voices": {
+    "vi-VN-HoaiMyNeural": "Nữ – Hoài My",
+    "vi-VN-NamMinhNeural": "Nam – Nam Minh"
+   },
+   "geo": "VN"
+  },
+  "en": {
+   "name": "English (US)",
+   "gtts": "en",
+   "voices": {
+    "en-US-AndrewNeural": "Male – Andrew",
+    "en-US-AvaNeural": "Female – Ava",
+    "en-US-BrianNeural": "Male – Brian",
+    "en-US-EmmaNeural": "Female – Emma"
+   },
+   "geo": "US"
+  },
+  "en-GB": {
+   "name": "English (UK)",
+   "gtts": "en",
+   "voices": {
+    "en-GB-RyanNeural": "Male – Ryan",
+    "en-GB-SoniaNeural": "Female – Sonia"
+   },
+   "geo": "GB"
+  },
+  "ja": {
+   "name": "日本語",
+   "gtts": "ja",
+   "nospace": true,
+   "voices": {
+    "ja-JP-NanamiNeural": "女性 – Nanami",
+    "ja-JP-KeitaNeural": "男性 – Keita"
+   },
+   "geo": "JP"
+  },
+  "ko": {
+   "name": "한국어",
+   "gtts": "ko",
+   "voices": {
+    "ko-KR-SunHiNeural": "여성 – SunHi",
+    "ko-KR-InJoonNeural": "남성 – InJoon"
+   },
+   "geo": "KR"
+  },
+  "zh": {
+   "name": "中文 (普通话)",
+   "gtts": "zh-CN",
+   "nospace": true,
+   "voices": {
+    "zh-CN-XiaoxiaoNeural": "女 – 晓晓",
+    "zh-CN-YunxiNeural": "男 – 云希"
+   },
+   "geo": "TW"
+  },
+  "th": {
+   "name": "ไทย",
+   "gtts": "th",
+   "nospace": true,
+   "voices": {
+    "th-TH-PremwadeeNeural": "หญิง – Premwadee",
+    "th-TH-NiwatNeural": "ชาย – Niwat"
+   },
+   "geo": "TH"
+  },
+  "id": {
+   "name": "Bahasa Indonesia",
+   "gtts": "id",
+   "voices": {
+    "id-ID-GadisNeural": "Perempuan – Gadis",
+    "id-ID-ArdiNeural": "Laki-laki – Ardi"
+   },
+   "geo": "ID"
+  },
+  "es": {
+   "name": "Español",
+   "gtts": "es",
+   "voices": {
+    "es-ES-ElviraNeural": "Mujer – Elvira",
+    "es-MX-JorgeNeural": "Hombre – Jorge (MX)"
+   },
+   "geo": "MX"
+  },
+  "pt": {
+   "name": "Português (BR)",
+   "gtts": "pt",
+   "voices": {
+    "pt-BR-FranciscaNeural": "Mulher – Francisca",
+    "pt-BR-AntonioNeural": "Homem – Antonio"
+   },
+   "geo": "BR"
+  },
+  "fr": {
+   "name": "Français",
+   "gtts": "fr",
+   "voices": {
+    "fr-FR-DeniseNeural": "Femme – Denise",
+    "fr-FR-HenriNeural": "Homme – Henri"
+   },
+   "geo": "FR"
+  },
+  "de": {
+   "name": "Deutsch",
+   "gtts": "de",
+   "voices": {
+    "de-DE-KatjaNeural": "Frau – Katja",
+    "de-DE-ConradNeural": "Mann – Conrad"
+   },
+   "geo": "DE"
+  },
+  "hi": {
+   "name": "हिन्दी",
+   "gtts": "hi",
+   "voices": {
+    "hi-IN-SwaraNeural": "महिला – Swara",
+    "hi-IN-MadhurNeural": "पुरुष – Madhur"
+   },
+   "geo": "IN"
+  },
+  "ru": {
+   "name": "Русский",
+   "gtts": "ru",
+   "voices": {
+    "ru-RU-SvetlanaNeural": "Женщина – Svetlana",
+    "ru-RU-DmitryNeural": "Мужчина – Dmitry"
+   },
+   "geo": "RU"
+  },
+  "it": {
+   "name": "Italiano",
+   "gtts": "it",
+   "voices": {
+    "it-IT-ElsaNeural": "Donna – Elsa",
+    "it-IT-DiegoNeural": "Uomo – Diego"
+   },
+   "geo": "IT"
+  },
+  "tr": {
+   "name": "Türkçe",
+   "gtts": "tr",
+   "voices": {
+    "tr-TR-EmelNeural": "Kadın – Emel",
+    "tr-TR-AhmetNeural": "Erkek – Ahmet"
+   },
+   "geo": "TR"
+  },
+  "ar": {
+   "name": "العربية",
+   "gtts": "ar",
+   "rtl": true,
+   "voices": {
+    "ar-SA-ZariyahNeural": "أنثى – Zariyah",
+    "ar-SA-HamedNeural": "ذكر – Hamed"
+   },
+   "geo": "SA"
   }
+ }
 }

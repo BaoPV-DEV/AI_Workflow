@@ -17,6 +17,7 @@ def _ctx(data: dict) -> dict:
     st = config.style(data.get("style") or s.get("default_style", "classic_light"))
     w, h = config.resolution(data)
     return {"settings": s, "style": st, "w": w, "h": h, "fps": data.get("fps") or s.get("fps", 30),
+            "burn": data.get("burn_captions"),
             "lang": data.get("lang") or s.get("default_lang", "vi")}
 
 
@@ -106,7 +107,7 @@ def _render_one(args):
 def caption_mode(c: dict) -> str:
     """ass: ffmpeg đốt phụ đề (cần libass). html: vẽ phụ đề ngay trong khung hình (không cần libass)."""
     r = c["settings"]["render"]
-    if not r.get("captions", True) or not c["style"].get("captions", {}).get("enabled", True):
+    if c.get("burn") is False or not r.get("captions", True) or not c["style"].get("captions", {}).get("enabled", True):
         return "off"
     mode = r.get("captions_mode", "auto")
     if mode == "auto":
@@ -231,6 +232,14 @@ def render(project, draft=False, captions_on=None) -> Path:
         cmd += ["-c:v", "copy"]
     cmd += ["-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", final]
     run(cmd)
+    if data.get("subtitle_langs") and not draft:
+        try:
+            from .studio_api import extra_subtitles
+            made = extra_subtitles(project, data["subtitle_langs"])
+            if made:
+                log(f"📝 Phụ đề thêm: {', '.join(made)}")
+        except Exception as e:
+            log(f"⚠ Không tạo được phụ đề thêm: {e}")
     log(f"✅ Xong: {final}  ({t:.1f}s)")
     return final
 

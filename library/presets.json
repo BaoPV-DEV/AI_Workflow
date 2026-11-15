@@ -1,0 +1,146 @@
+{
+ "_doc": "Thể loại mẫu ở trang Bắt đầu. genre = khuôn kịch bản (config/prompts), notes = yêu cầu thêm cho Claude.",
+ "presets": [
+  {
+   "id": "explainer",
+   "icon": "💡",
+   "name": "Giải thích kiến thức",
+   "aspect": "16:9",
+   "minutes": 4,
+   "genre": "explainer",
+   "style": "classic_light",
+   "color": "#7c3aed",
+   "notes": "Mở bằng câu hỏi, 3 ý chính, ví dụ đời thường, kết bằng một câu đọng lại."
+  },
+  {
+   "id": "story",
+   "icon": "📖",
+   "name": "Kể chuyện / hoạt hình",
+   "aspect": "16:9",
+   "minutes": 3,
+   "genre": "animation",
+   "style": "cozy_story",
+   "color": "#f97316",
+   "notes": "Có nhân vật, mâu thuẫn, cao trào và bài học; nhiều cảnh người que diễn."
+  },
+  {
+   "id": "top",
+   "icon": "🏆",
+   "name": "Top / danh sách",
+   "aspect": "16:9",
+   "minutes": 5,
+   "genre": "motion_graphic",
+   "style": "beanie_tech",
+   "color": "#eab308",
+   "notes": "Đếm ngược từ thấp tới cao, mỗi mục có tiêu đề + 1 số liệu hoặc ví dụ, mục số 1 bất ngờ nhất."
+  },
+  {
+   "id": "history",
+   "icon": "🏛️",
+   "name": "Lịch sử",
+   "aspect": "16:9",
+   "minutes": 6,
+   "genre": "explainer",
+   "style": "historical",
+   "color": "#92400e",
+   "notes": "Theo dòng thời gian, có mốc năm (dùng timeline), nhân vật lịch sử diễn bằng người que, kiểm chứng sự kiện."
+  },
+  {
+   "id": "news",
+   "icon": "📰",
+   "name": "Tin nhanh",
+   "aspect": "9:16",
+   "minutes": 1,
+   "genre": "news",
+   "style": "neon_news",
+   "color": "#2563eb",
+   "notes": "Trung lập, nêu nguồn, không suy đoán."
+  },
+  {
+   "id": "quiz",
+   "icon": "❓",
+   "name": "Đố vui / quiz",
+   "aspect": "9:16",
+   "minutes": 1,
+   "genre": "motion_graphic",
+   "style": "meme_dynamic",
+   "color": "#dc2626",
+   "notes": "3-5 câu hỏi, mỗi câu: hỏi (kinetic_text) → đếm ngược 3 giây (pause) → đáp án (stat_card hoặc bullet_list)."
+  },
+  {
+   "id": "kids",
+   "icon": "🧸",
+   "name": "Thiếu nhi",
+   "aspect": "16:9",
+   "minutes": 3,
+   "genre": "animation",
+   "style": "cozy_story",
+   "color": "#db2777",
+   "notes": "Ngôn ngữ đơn giản cho trẻ 5-9 tuổi, câu ngắn, tích cực, không đáng sợ, có bài học nhẹ nhàng."
+  },
+  {
+   "id": "review",
+   "icon": "⭐",
+   "name": "Review sản phẩm",
+   "aspect": "9:16",
+   "minutes": 1,
+   "genre": "motion_graphic",
+   "style": "beanie_tech",
+   "color": "#ea580c",
+   "notes": "Ưu, nhược (compare_split), thông số chính (stat_card), kết luận ai nên mua. Không bịa thông số."
+  },
+  {
+   "id": "howto",
+   "icon": "🛠️",
+   "name": "Hướng dẫn từng bước",
+   "aspect": "16:9",
+   "minutes": 4,
+   "genre": "explainer",
+   "style": "classic_light",
+   "color": "#0891b2",
+   "notes": "Các bước đánh số rõ ràng, mỗi bước một cảnh, lưu ý lỗi hay gặp."
+  },
+  {
+   "id": "inspire",
+   "icon": "🔥",
+   "name": "Truyền cảm hứng",
+   "aspect": "9:16",
+   "minutes": 1,
+   "genre": "animation",
+   "style": "classic_dark",
+   "color": "#e11d48",
+   "notes": "Một câu chuyện ngắn, nhịp chậm dần, câu kết đắt; không sáo rỗng."
+  },
+  {
+   "id": "facts",
+   "icon": "🤯",
+   "name": "Sự thật thú vị",
+   "aspect": "9:16",
+   "minutes": 1,
+   "genre": "motion_graphic",
+   "style": "meme_dynamic",
+   "color": "#7c3aed",
+   "notes": "Mở bằng sự thật gây sốc, giải thích vì sao, có nguồn kiểm chứng."
+  },
+  {
+   "id": "travel",
+   "icon": "🧭",
+   "name": "Du lịch / địa điểm",
+   "aspect": "16:9",
+   "minutes": 3,
+   "genre": "explainer",
+   "style": "cozy_story",
+   "color": "#059669",
+   "notes": "Vị trí, điều đặc biệt, thời điểm nên đi, chi phí tham khảo (nêu là ước tính), mẹo."
+  }
+ ],
+ "platforms": {
+  "YouTube": "16:9",
+  "YouTube Shorts": "9:16",
+  "TikTok": "9:16",
+  "Instagram Reels": "9:16",
+  "Instagram feed": "1:1",
+  "Facebook": "16:9",
+  "LinkedIn": "16:9"
+ }
+}
