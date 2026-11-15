@@ -110,8 +110,9 @@ def caption_mode(c: dict) -> str:
         return "off"
     mode = r.get("captions_mode", "auto")
     if mode == "auto":
+        import sys
         from .util import has_filter
-        mode = "ass" if has_filter("ass") else "html"
+        mode = "ass" if has_filter("ass") and sys.platform != "win32" else "html"
     return mode
 
 
@@ -271,19 +272,42 @@ def preview(project, at=0.62, only=None) -> Path:
     return sheet
 
 
+def _label_font() -> str | None:
+    """File font cụ thể cho drawtext (tránh phụ thuộc fontconfig – hay lỗi trên Windows)."""
+    import os
+    for f in (r"C:\Windows\Fonts\arialbd.ttf", r"C:\Windows\Fonts\arial.ttf", r"C:\Windows\Fonts\segoeui.ttf",
+              "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/System/Library/Fonts/Supplemental/Arial.ttf"):
+        if os.path.exists(f):
+            return f
+    return None
+
+
 def contact_sheet(stills: list[Path], sheet: Path, w: int, h: int, tile_w: int = 360) -> Path:
     n = len(stills)
     cols = min(n, 4 if h > w else 3)
     tile_h = round(tile_w * h / w / 2) * 2
-    cmd = [ffmpeg(), "-y", "-v", "error"]
-    for s in stills:
-        cmd += ["-i", s]
-    chains = "".join(f"[{i}:v]scale={tile_w}:{tile_h},drawtext=text='{p.stem}':x=8:y=8:fontsize=22:"
-                     f"fontcolor=white:box=1:boxcolor=black@0.6[v{i}];" for i, p in enumerate(stills))
-    if n == 1:
-        graph = chains.rstrip(";").replace("[v0]", "")
-    else:
-        layout = "|".join(f"{(i % cols) * tile_w}_{(i // cols) * tile_h}" for i in range(n))
-        graph = chains + "".join(f"[v{i}]" for i in range(n)) + f"xstack=inputs={n}:layout={layout}:fill=gray"
-    run(cmd + ["-filter_complex", graph, "-frames:v", "1", sheet])
+    font = _label_font()
+
+    def build(labels: bool):
+        cmd = [ffmpeg(), "-y", "-v", "error"]
+        for s in stills:
+            cmd += ["-i", s]
+        ff = font.replace("\\", "/").replace(":", "\\:") if font else ""
+        lab = (lambda p: f",drawtext=fontfile='{ff}':text='{p.stem}':x=8:y=8:fontsize=22:fontcolor=white:box=1:boxcolor=black@0.6") \
+            if labels and font else (lambda p: "")
+        chains = "".join(f"[{i}:v]scale={tile_w}:{tile_h}{lab(p)}[v{i}];" for i, p in enumerate(stills))
+        if n == 1:
+            graph = chains.rstrip(";").replace("[v0]", "")
+        else:
+            layout = "|".join(f"{(i % cols) * tile_w}_{(i // cols) * tile_h}" for i in range(n))
+            graph = chains + "".join(f"[v{i}]" for i in range(n)) + f"xstack=inputs={n}:layout={layout}:fill=gray"
+        return cmd + ["-filter_complex", graph, "-frames:v", "1", sheet]
+
+    try:
+        run(build(True))
+    except RuntimeError:
+        try:
+            run(build(False))  # không vẽ được nhãn thì bỏ nhãn, vẫn có bảng ảnh
+        except RuntimeError as e:
+            log(f"⚠ Không ghép được _sheet.jpg ({str(e)[:120]}); ảnh từng cảnh vẫn có trong thư mục preview")
     return sheet
