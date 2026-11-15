@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import mimetypes
+import os
 import subprocess
 import sys
 import threading
@@ -16,6 +17,10 @@ from engine import align, catalog, config, manifest, pipeline, studio_api
 
 WEB = Path(__file__).parent
 JOBS: dict[str, dict] = {}
+MIME = {".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8",
+        ".json": "application/json; charset=utf-8", ".svg": "image/svg+xml", ".mp4": "video/mp4", ".wav": "audio/wav",
+        ".mp3": "audio/mpeg", ".jpg": "image/jpeg", ".png": "image/png", ".srt": "text/plain; charset=utf-8"}
+VERSION = "studio-2"
 
 
 def run_job(args: list[str]) -> str:
@@ -118,7 +123,7 @@ class H(SimpleHTTPRequestHandler):
             return self._json({"error": "không có file"}, 404)
         data = path.read_bytes()
         rng = self.headers.get("Range")
-        ctype = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+        ctype = MIME.get(path.suffix.lower()) or mimetypes.guess_type(path.name)[0] or "application/octet-stream"
         if rng and rng.startswith("bytes="):  # cho phép tua video
             a, _, b = rng[6:].partition("-")
             a, b = int(a or 0), int(b) if b else len(data) - 1
@@ -168,6 +173,8 @@ class H(SimpleHTTPRequestHandler):
                 return self._file(WEB / "index.html")
             if u.startswith("/web/"):
                 return self._file(self._safe(WEB, u[5:]))
+            if u == "/api/version":
+                return self._json({"version": VERSION, "root": str(config.ROOT)})
             if u == "/api/home":
                 return self._json(studio_api.home())
             if u == "/api/library":
@@ -286,6 +293,9 @@ class H(SimpleHTTPRequestHandler):
                     if b.get(k):
                         args += [f"--{k}", b[k]]
                 return self._json({"job": run_job(args)})
+            if u == "/api/shutdown":
+                threading.Timer(0.3, lambda: os._exit(0)).start()
+                return self._json({"ok": True})
             if u == "/api/series":
                 return self._json(studio_api.series_add(b.get("name", "").strip()))
             if u == "/api/plan":
@@ -364,9 +374,32 @@ class H(SimpleHTTPRequestHandler):
             return self._json({"error": f"{type(e).__name__}: {e}"}, 500)
 
 
+def _stop_old(port: int) -> bool:
+    """Studio cũ còn chạy trên cổng này? Bản mới có /api/shutdown; bản rất cũ thì không tắt được từ xa."""
+    import urllib.request
+    try:
+        urllib.request.urlopen(urllib.request.Request(f"http://127.0.0.1:{port}/api/shutdown", data=b"{}",
+                                                      headers={"Content-Type": "application/json"}), timeout=2)
+        print("↻ Đã tắt Studio cũ đang chạy, khởi động bản mới…")
+        return True
+    except Exception:
+        return False
+
+
 def serve(port: int = 8765, open_browser: bool = True):
     config.workspace().mkdir(exist_ok=True)
-    srv = ThreadingHTTPServer(("127.0.0.1", port), H)
+    srv = None
+    for attempt in range(2):
+        try:
+            srv = ThreadingHTTPServer(("127.0.0.1", port), H)
+            break
+        except OSError:
+            if attempt == 0 and _stop_old(port):
+                import time
+                time.sleep(1.2)
+                continue
+            print(f"✘ Cổng {port} đang bị một Studio cũ chiếm. Đóng cửa sổ Studio cũ (hoặc khởi động lại máy) rồi mở lại.")
+            return
     url = f"http://127.0.0.1:{port}"
     print(f"🎛  Web Studio: {url}  (Ctrl+C để tắt)")
     if open_browser:
