@@ -326,7 +326,7 @@ EDITABLE = {"tts.engine", "tts.rate", "render.workers", "render.encoder", "rende
             "render.caption_words", "render.music", "default_style", "default_aspect", "default_lang", "fps",
             "agent.backend", "visual.comfyui_url", "visual.browser_channel", "visual.default_workflow", "trends.youtube_api_key",
             "agent.tiers.plan", "agent.tiers.ideas", "agent.tiers.edit", "agent.tiers.translate", "agent.tiers.subtitles",
-            "agent.tiers.publish"}
+            "agent.tiers.publish", "studio.auto_exit"}
 
 
 def settings_get() -> dict:

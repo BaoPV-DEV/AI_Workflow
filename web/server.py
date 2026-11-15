@@ -20,7 +20,33 @@ JOBS: dict[str, dict] = {}
 MIME = {".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8",
         ".json": "application/json; charset=utf-8", ".svg": "image/svg+xml", ".mp4": "video/mp4", ".wav": "audio/wav",
         ".mp3": "audio/mpeg", ".jpg": "image/jpeg", ".png": "image/png", ".srt": "text/plain; charset=utf-8"}
-VERSION = "studio-2"
+VERSION = "studio-3"
+
+# ---- tự tắt khi không còn tab nào mở (đóng tab = đóng cổng)
+TABS: dict[str, float] = {}
+SEEN_TAB = False
+LAST_BYE = 0.0
+STALE = 90      # tab ẩn bị trình duyệt giảm tần suất hẹn giờ tới ~1 phút/lần, nên chờ 90 giây
+GRACE = 8       # sau khi tab báo đóng: chờ chút để F5 / mở lại không bị tắt nhầm
+
+
+def _busy() -> bool:
+    return any(not j["done"] for j in JOBS.values())
+
+
+def _watchdog():
+    import time
+    while True:
+        time.sleep(2)
+        if not config.settings().get("studio", {}).get("auto_exit", True) or not SEEN_TAB:
+            continue
+        now = time.time()
+        for t, seen in list(TABS.items()):
+            if now - seen > STALE:
+                TABS.pop(t, None)
+        if not TABS and now - LAST_BYE > GRACE and not _busy():
+            print("👋 Đã đóng tab Studio: tắt máy chủ (mở lại bằng shortcut AI Workflow Studio).", flush=True)
+            os._exit(0)
 
 
 def run_job(args: list[str]) -> str:
@@ -158,7 +184,10 @@ class H(SimpleHTTPRequestHandler):
 
     def _body(self) -> dict:
         n = int(self.headers.get("Content-Length") or 0)
-        return json.loads(self.rfile.read(n) or b"{}")
+        try:
+            return json.loads(self.rfile.read(n) or b"{}")
+        except json.JSONDecodeError:
+            return {}
 
     @staticmethod
     def _safe(base: Path, rel: str) -> Path:
@@ -294,6 +323,17 @@ class H(SimpleHTTPRequestHandler):
                     if b.get(k):
                         args += [f"--{k}", b[k]]
                 return self._json({"job": run_job(args)})
+            if u in ("/api/ping", "/api/bye"):
+                import time
+                global SEEN_TAB, LAST_BYE
+                tab = str(b.get("tab", ""))[:40]
+                if u == "/api/ping" and tab:
+                    TABS[tab] = time.time()
+                    SEEN_TAB = True
+                elif tab:
+                    TABS.pop(tab, None)
+                    LAST_BYE = time.time()
+                return self._json({"ok": True, "tabs": len(TABS), "busy": _busy()})
             if u == "/api/shutdown":
                 threading.Timer(0.3, lambda: os._exit(0)).start()
                 return self._json({"ok": True})
@@ -402,7 +442,8 @@ def serve(port: int = 8765, open_browser: bool = True):
             print(f"✘ Cổng {port} đang bị một Studio cũ chiếm. Đóng cửa sổ Studio cũ (hoặc khởi động lại máy) rồi mở lại.")
             return
     url = f"http://127.0.0.1:{port}"
-    print(f"🎛  Web Studio: {url}  (Ctrl+C để tắt)")
+    print(f"🎛  Web Studio: {url}  (đóng tab Studio là tự tắt; Ctrl+C để tắt ngay)")
+    threading.Thread(target=_watchdog, daemon=True).start()
     if open_browser:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
     try:

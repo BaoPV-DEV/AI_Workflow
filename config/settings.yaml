@@ -35,6 +35,9 @@ visual:
   fal_key_env: FAL_KEY
   default_workflow: sdxl_image          # workflow ComfyUI mặc định cho ảnh AI (templates/comfy_workflows)
 
+studio:
+  auto_exit: true                 # đóng tab Studio thì tự tắt máy chủ (giải phóng cổng 8765)
+
 agent:
   # Model cho từng việc: opus (mạnh nhất, tốn lượt nhất) | sonnet (cân bằng) | haiku (nhanh, rẻ)
   tiers:

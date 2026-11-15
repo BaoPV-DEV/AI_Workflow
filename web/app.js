@@ -446,15 +446,23 @@ async function pgSettings() {
         <div class="row"><div><label>FPS</label>${sel('fps', [[24, '24'], [30, '30'], [60, '60']])}</div><div><label>Nhạc nền mặc định</label><input data-s="render.music" value="${esc(v['render.music'] || '')}" placeholder="đường dẫn mp3"></div></div></div>
       <div class="card"><div class="cap">📐 Mặc định &amp; nguồn xu hướng</div>
         <div class="row"><div><label style="margin-top:0">Phong cách</label>${sel('default_style', s.styles.map(x => [x, x]))}</div><div><label style="margin-top:0">Khung hình</label>${sel('default_aspect', [['9:16', '9:16'], ['16:9', '16:9'], ['1:1', '1:1'], ['4:5', '4:5']])}</div><div><label style="margin-top:0">Ngôn ngữ</label><select data-s="default_lang">${langOptions(v.default_lang)}</select></div></div>
+        <label>Khi đóng tab Studio</label>${sel('studio.auto_exit', [['true', 'Tự tắt máy chủ (giải phóng cổng 8765)'], ['false', 'Giữ máy chủ chạy (vd để Claude Desktop dùng)']])}
         <label>YouTube API key (tuỳ chọn, thêm nguồn YouTube Most Popular)</label><input data-s="trends.youtube_api_key" value="${esc(v['trends.youtube_api_key'] || '')}" placeholder="AIza…"></div>
     </div>
     <div class="card" style="margin-top:16px"><div class="runbar"><button class="gbtn" id="ssave">Lưu cài đặt</button><span class="st" id="sst"></span></div></div></div>`);
   $('#ssave').onclick = async () => {
-    const values = {}; page('settings').querySelectorAll('[data-s]').forEach(el => { let x = el.value; if (/^\d+$/.test(x)) x = +x; values[el.dataset.s] = x; });
+    const values = {}; page('settings').querySelectorAll('[data-s]').forEach(el => { let x = el.value; if (/^\d+$/.test(x)) x = +x; if (x === 'true') x = true; if (x === 'false') x = false; values[el.dataset.s] = x; });
     await api('/api/settings', { method: 'POST', body: { values } });
     META = await api('/api/meta'); renderAiChip(); toast('Đã lưu cài đặt'); pgSettings();
   };
   $('#smcp').onclick = async () => { const r = await api('/api/mcp-install', { method: 'POST', body: {} }); $('#smcpst').textContent = r.ok ? 'Đã kết nối. Thoát hẳn Claude Desktop rồi mở lại.' : 'Lỗi: ' + r.log; };
 }
+
+/* báo máy chủ tab còn mở; đóng tab thì máy chủ tự tắt (Cài đặt: studio.auto_exit) */
+const TAB_ID = Math.random().toString(36).slice(2, 10);
+const ping = () => fetch('/api/ping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tab: TAB_ID }) }).catch(() => {});
+ping(); setInterval(ping, 5000);
+document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && ping());
+window.addEventListener('pagehide', () => navigator.sendBeacon('/api/bye', JSON.stringify({ tab: TAB_ID })));
 
 appBoot();
