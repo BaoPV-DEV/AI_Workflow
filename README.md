@@ -35,7 +35,7 @@ vf edit <id> "cảnh 3 cho Bo cầm cúp, vui hơn"     :: agent sửa đúng 1 
 vf translate <id> --to en,ja                      :: bản dịch thành project mới
 ```
 
-Thử ngay với video mẫu: `xcopy /e /i examples\demo_pipeline workspace\demo_pipeline` rồi `vf all demo_pipeline`.
+Video đầu tiên trong 10 phút: xem [docs/QUICKSTART.md](docs/QUICKSTART.md).
 
 ## Có gì trong bộ này
 

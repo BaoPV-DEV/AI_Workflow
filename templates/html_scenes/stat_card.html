@@ -27,6 +27,8 @@ VF.scene({
     l = el('div', { class: 'lab title fs-m', text: p.label || '' }, c);
     s = el('div', { class: 'sub fs-s', text: p.sub || '' }, c);
     t0 = VF.at(p.at, 0.2); val = +p.value || 0; dec = p.decimals ?? (Number.isInteger(val) ? 0 : 1);
+    const full = (p.prefix || '') + val.toLocaleString('vi-VN') + (p.suffix || '');
+    if (full.length > 4) n.style.fontSize = Math.min(W, H) * 0.26 * Math.max(0.45, 4.4 / full.length) + 'px';
   },
   draw(t, inp) {
     const p = inp.props, k = VF.prog(t, t0, 1.2, 'out');
