@@ -189,6 +189,10 @@ class H(SimpleHTTPRequestHandler):
                 return self._json({"ok": True})
             if u == "/api/series":
                 return self._json(studio_api.series_delete(self._q().get("name", "")))
+            if u == "/api/cinema":
+                from engine import cinema
+                cinema.delete(self._q().get("slug", ""))
+                return self._json({"ok": True})
             if u == "/api/tools/files":
                 studio_api.tools_delete(self._q().get("name", ""))
                 return self._json({"ok": True})
@@ -247,6 +251,14 @@ class H(SimpleHTTPRequestHandler):
                 return self._file(self._safe(config.TEMPLATES / "html_scenes", u[5:]))
             if u.startswith("/files/"):
                 return self._file(self._safe(config.workspace(), u[7:]))
+            if u == "/api/cinema":
+                from engine import cinema
+                return self._json(cinema.status())
+            if u == "/api/cinema/file":
+                from engine import cinema
+                q = self._q()
+                f = cinema.project_dir(q.get("slug", "")) / Path(q.get("name", "")).name
+                return self._json({"text": f.read_text(encoding="utf-8") if f.exists() else ""})
             if u == "/api/char3d":
                 from engine import char3d
                 st = char3d.status()
@@ -403,6 +415,20 @@ class H(SimpleHTTPRequestHandler):
                 return self._json({"project_id": d.name, "scenes": len(data["scenes"]), "errors": manifest.validate(data)})
             if u.startswith("/api/p/") and u.endswith("/publish"):
                 return self._json({"job": run_fn(studio_api.publish_pack, u.split("/")[3], b.get("platform", "YouTube"))})
+            if u == "/api/cinema/setup":
+                return self._json({"job": run_job(["cinema", "setup"])})
+            if u == "/api/cinema/new":
+                args = ["cinema", "new", b["topic"], "--seconds", str(int(b.get("seconds", 60))), "--lang", b.get("lang", "vi"),
+                        "--aspect", b.get("aspect", "16:9")]
+                for k in ("char3d", "extra"):
+                    if b.get(k):
+                        args += [f"--{k}", b[k]]
+                return self._json({"job": run_job(args)})
+            if u == "/api/cinema/run":
+                act = b.get("action", "render")
+                if act not in ("voice", "stills", "render"):
+                    return self._json({"error": "action?"}, 400)
+                return self._json({"job": run_job(["cinema", act, b["slug"]] + (["--preview"] if b.get("preview") else []))})
             if u == "/api/char3d/gpucheck":
                 from engine import char3d
                 return self._json({"job": run_fn(char3d.gpu_check)})

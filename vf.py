@@ -302,6 +302,12 @@ def cmd_skills_sync(a):
     dst = config.ROOT / ".claude" / "skills" / "video-strategy" / "references"
     for n in ("channel-analysis-framework.md", "seo-and-retention-rules.md", "policy-checklist.md"):
         shutil.copy2(src / n, dst / n)
+    # nguyên 2 skill gốc (chế độ Điện ảnh chạy trực tiếp bằng chúng)
+    for name in ("ai-video-production-pipeline", "ai-video-character"):
+        s_src, s_dst = cache / ".claude" / "skills" / name, config.ROOT / ".claude" / "skills" / name
+        if s_src.exists():
+            shutil.copytree(s_src, s_dst, dirs_exist_ok=True,
+                            ignore=shutil.ignore_patterns("render_profile.json", "__pycache__"))
     # bộ dựng nhân vật 3D (make_character.py đã chỉnh đường dẫn cho AI Workflow nên giữ nguyên)
     shutil.copy2(cache / ".claude" / "skills" / "ai-video-production-pipeline" / "scripts" / "hero3d" / "build_character.py",
                  config.ROOT / "engine" / "hero3d" / "build_character.py")
@@ -336,6 +342,24 @@ def cmd_char3d(a):
         char3d.sprites(a.id, a.profile, a.light, a.quality or "chuan", a.only or "")
         from engine import catalog
         catalog.write()
+
+
+def cmd_cinema(a):
+    from engine import cinema
+    if a.action == "setup":
+        cinema.setup()
+    elif a.action == "list":
+        for p in cinema.projects():
+            print(f"{p['slug']:32s} {p['shots']:3d} shot  {'🎬 ' + ', '.join(p['videos']) if p['videos'] else '(chưa dựng)'}")
+    elif a.action == "new":
+        slug = cinema.write(a.topic, a.seconds, a.lang, a.aspect, a.char3d or "", a.extra or "")
+        print(f"✔ {slug}: xem ảnh trong workspace/_cinema/{slug}/out, rồi: vf cinema render {slug}")
+    elif a.action == "voice":
+        cinema.voices(a.topic)
+    elif a.action == "stills":
+        cinema.render(a.topic, stills=True)
+    elif a.action == "render":
+        print(f"✔ {cinema.render(a.topic, preview=a.preview)}")
 
 
 def cmd_studio(a):
@@ -405,6 +429,11 @@ def main(argv=None):
     s.add_argument("--base", help="mẫu gốc khi tạo mới (vd mia, rain_hero)"); s.add_argument("--name")
     s.add_argument("--profile", default="co_ban", choices=["co_ban", "day_du"]); s.add_argument("--light", default="day")
     s.add_argument("--quality", choices=["nhap", "chuan", "cao"]); s.add_argument("--only", help="vd walk:side:day,talk:front34:day")
+    s = add("cinema", cmd_cinema, "chế độ Điện ảnh (pipeline repo Skills): setup | list | new <chủ đề> | voice|stills|render <slug>")
+    s.add_argument("action", choices=["setup", "list", "new", "voice", "stills", "render"]); s.add_argument("topic", nargs="?")
+    s.add_argument("--seconds", type=int, default=60); s.add_argument("--lang", default="vi")
+    s.add_argument("--aspect", default="16:9", choices=["16:9", "9:16"]); s.add_argument("--char3d"); s.add_argument("--extra")
+    s.add_argument("--preview", action="store_true", help="nửa kích thước, 15 fps: xem nhanh")
     s = add("studio", cmd_studio, "mở Web Studio"); s.add_argument("--port", type=int, default=8765); s.add_argument("--no-open", action="store_true")
     a = p.parse_args(argv)
     try:

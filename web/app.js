@@ -1,5 +1,5 @@
 /* AI Workflow Studio – điều hướng và các trang (dùng chung $, esc, api, toast, META… với editor.js). */
-const PAGES = ['home', 'library', 'trends', 'write', 'narration', 'gpu', 'editor', 'render', 'char3d', 'tools', 'settings'];
+const PAGES = ['home', 'library', 'cinema', 'trends', 'write', 'narration', 'gpu', 'editor', 'render', 'char3d', 'tools', 'settings'];
 const BRAIN_NAME = { api: 'API key', cli: 'Claude Code (gói Claude)', manual: 'chưa kết nối' };
 const ASPECT_NAME = { '16:9': 'Ngang 16:9', '9:16': 'Dọc 9:16', '1:1': 'Vuông 1:1', '4:5': 'Dọc 4:5' };
 const PLATFORM_HINT = { '16:9': 'Ngang 16:9: hợp với YouTube, Facebook, LinkedIn.', '9:16': 'Dọc 9:16: hợp với YouTube Shorts, TikTok, Instagram Reels.', '1:1': 'Vuông 1:1: hợp với Instagram feed, Facebook.', '4:5': 'Dọc 4:5: hợp với Instagram feed, Facebook.' };
@@ -29,7 +29,7 @@ async function route() {
     setTimeout(() => { fitFrame && fitFrame(); M && renderTimeline(); }, 50);
     return;
   }
-  await ({ home: pgHome, library: pgLibrary, trends: pgTrends, write: pgWrite, narration: pgNarration, gpu: pgGpu, render: pgRender, char3d: pgChar3d, tools: pgTools, settings: pgSettings })[p](arg2);
+  await ({ home: pgHome, library: pgLibrary, trends: pgTrends, write: pgWrite, narration: pgNarration, gpu: pgGpu, render: pgRender, char3d: pgChar3d, cinema: pgCinema, tools: pgTools, settings: pgSettings })[p](arg2);
 }
 window.addEventListener('hashchange', route);
 document.querySelectorAll('.nav').forEach(n => n.onclick = () => go(n.dataset.pg));
@@ -75,6 +75,67 @@ function watch(jobId, el, label, onDone) {
     onDone && onDone(j);
   };
   tick();
+}
+
+/* ================= ĐIỆN ẢNH (pipeline repo Skills: storyboard + anim_kit + render.py) ================= */
+let CINE = { seconds: 60, aspect: '16:9' };
+async function pgCinema() {
+  const st = await api('/api/cinema');
+  const cli = META.brain.backend === 'cli';
+  const secs = [[20, '20 giây (thử)'], [30, '30 giây'], [60, '1 phút (Shorts)'], [90, '1,5 phút'], [180, '3 phút'], [480, '8 phút'], [600, '10 phút']];
+  const doc = { 'storyboard.md': '📋 Storyboard', 'audit.md': '🛡 Kiểm duyệt', 'package.md': '🚀 SEO', 'qa-report.md': '✅ QA' };
+  const card = p => `<div class="cine" data-slug="${esc(p.slug)}">
+      <div class="cinehead"><div style="min-width:0"><div class="t">${esc(p.title)}</div>
+        <div class="small muted">${esc(p.slug)} · ${p.shots} shot${p.seconds ? ' · ' + p.seconds + 's' : ''}${p.profile ? ' · ' + esc(p.profile) : ''}</div></div>
+        <button class="xbtn" data-cdel="${esc(p.slug)}" title="Chuyển vào thùng rác">🗑</button></div>
+      ${p.videos.length ? `<video class="outv" controls src="/files/_cinema/${esc(p.slug)}/out/${esc(p.videos.find(v => !/preview/.test(v)) || p.videos[0])}?${p.mtime}"></video>` : ''}
+      ${p.stills.length ? `<div class="stills">${p.stills.filter((_, i) => i % 2 === 0).slice(0, 8).map(f => `<a href="/files/_cinema/${esc(p.slug)}/out/${esc(f)}?${p.mtime}" target="_blank"><img src="/files/_cinema/${esc(p.slug)}/out/${esc(f)}?${p.mtime}" loading="lazy"></a>`).join('')}</div>` : ''}
+      ${Object.keys(p.qa).length ? `<div class="bs" style="margin:8px 0">${p.qa.duration_s != null ? `<span class="badge">${p.qa.duration_s}s</span>` : ''}${p.qa.wpm_while_speaking ? `<span class="badge">${Math.round(p.qa.wpm_while_speaking)} từ/phút</span>` : ''}${p.qa.integrated_lufs != null ? `<span class="badge">${p.qa.integrated_lufs} LUFS</span>` : ''}${p.qa.missing_assets ? `<span class="badge err">thiếu ${p.qa.missing_assets} asset</span>` : ''}${p.qa.size_mb ? `<span class="badge">${p.qa.size_mb} MB</span>` : ''}</div>` : ''}
+      <div class="ac">
+        ${p.has_storyboard ? `<button class="btn2" data-crun="stills">🖼 Ảnh xem thử</button><button class="btn2" data-crun="preview">⚡ Dựng nhanh</button><button class="btn2 pri" data-crun="render">🎬 Dựng video</button>` : '<span class="small muted">Chưa có storyboard</span>'}
+        ${Object.entries(doc).filter(([f]) => p.files[f]).map(([f, n]) => `<button class="btn2" data-cdoc="${f}">${n}</button>`).join('')}
+        ${p.videos.map(v => `<a class="btn2" href="/files/_cinema/${esc(p.slug)}/out/${esc(v)}" download>⬇ ${esc(v)}</a>`).join('')}
+        <span class="st small muted" data-cst></span></div></div>`;
+  html(page('cinema'), `<div class="wrap">
+    <div class="ph" style="display:block"><h1>🎬 Điện ảnh</h1><p class="muted" style="margin:6px 0 0">Chạy nguyên bộ skill của repo Skills: Claude lên ý tưởng, dàn ý, storyboard, <b>viết code từng cảnh</b> (hạt, chiều sâu, ánh sáng, nhân vật 3D), kiểm duyệt chính sách, SEO; máy bạn dựng hình + nhạc + hiệu ứng âm thanh. Giọng đọc dùng edge-tts của AI Workflow.</p></div>
+    ${st.ready ? '' : `<div class="card"><div class="cap">Cài đặt (1 lần)</div><p class="small">Cần thư viện dựng hình skia-python, numpy, opencv (~100 MB) ${st.ffprobe ? '' : 'và <b>ffmpeg bản đầy đủ có ffprobe</b> trong PATH'}.</p>
+      <div class="row"><button class="btn2 pri" id="cnsetup">⬇ Cài thư viện dựng hình</button><span class="st small muted" id="cnsetupst"></span></div></div>`}
+    <div class="card"><div class="cap">Video mới</div>
+      ${cli ? '' : '<p class="small" style="color:var(--err)">Chế độ này cần AI là <b>Claude Code</b> (Cài đặt → AI) vì Claude phải tự viết và chạy code cảnh.</p>'}
+      <label style="margin-top:0">Chủ đề</label><input id="cntopic" placeholder="vd: Chuyện gì xảy ra nếu bạn bé bằng con kiến?" value="${esc(CINE.topic || '')}">
+      <div class="row" style="align-items:flex-end;margin-top:8px">
+        <div><label style="margin-top:0">Thời lượng</label><select id="cnsec">${secs.map(([v, n]) => `<option value="${v}" ${v === CINE.seconds ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+        <div style="flex:none"><label style="margin-top:0">Khung hình</label>${segHtml(['16:9', '9:16'], CINE.aspect, 'cnasp')}</div>
+        <div><label style="margin-top:0">Ngôn ngữ</label><select id="cnlang">${langOptions(CINE.lang || 'vi')}</select></div>
+        <div><label style="margin-top:0">Nhân vật 3D</label><select id="cnchar"><option value="">Không (nhân vật vẽ bằng code)</option>${st.characters.map(c => `<option value="${esc(c.id)}">🧍 ${esc(c.name)}</option>`).join('')}</select></div></div>
+      <label>Yêu cầu thêm (tuỳ chọn)</label><input id="cnextra" placeholder="vd: kênh khoa học vui cho người lớn, nhạc hồi hộp, kết bằng câu hỏi">
+      <div class="runbar" style="margin-top:12px"><button class="gbtn" id="cngo" ${cli && st.ready ? '' : 'disabled'}>✨ Viết storyboard &amp; ảnh xem thử</button>
+        <div class="st"><div id="cnst">Claude làm việc 10–30 phút (tốn lượt dùng gói Claude nhiều hơn chế độ thường). Xong sẽ có ảnh xem thử để duyệt trước khi dựng.</div></div></div></div>
+    <div class="cinegrid">${st.projects.map(card).join('') || '<p class="muted">Chưa có video Điện ảnh nào.</p>'}</div>
+    <dialog id="cndlg"><div class="dhead"><b id="cndlgt"></b><button class="icon" onclick="cndlg.close()">✕</button></div><div class="dbody"><pre id="cndoc" style="white-space:pre-wrap;font-size:13px"></pre></div></dialog></div>`);
+  const P = page('cinema');
+  bindSeg('cnasp', v => { CINE.aspect = v; });
+  if ($('#cnsetup')) $('#cnsetup').onclick = async () => { const r = await api('/api/cinema/setup', { method: 'POST', body: {} }); watch(r.job, $('#cnsetupst'), 'Đang cài', j => { if (j.code === 0) pgCinema(); }); };
+  $('#cngo').onclick = async () => {
+    const topic = $('#cntopic').value.trim(); if (!topic) return $('#cntopic').focus();
+    CINE = { ...CINE, topic, seconds: +$('#cnsec').value, lang: $('#cnlang').value };
+    $('#cngo').disabled = true;
+    const r = await api('/api/cinema/new', { method: 'POST', body: { topic, seconds: CINE.seconds, aspect: CINE.aspect, lang: CINE.lang, char3d: $('#cnchar').value, extra: $('#cnextra').value.trim() } });
+    watch(r.job, $('#cnst'), 'Claude đang làm theo skill', j => { $('#cngo').disabled = false; if (j.code === 0) { CINE.topic = ''; toast('Đã có storyboard và ảnh xem thử'); pgCinema(); } });
+  };
+  P.querySelectorAll('.cine').forEach(c => {
+    const slug = c.dataset.slug, stEl = c.querySelector('[data-cst]');
+    c.querySelectorAll('[data-crun]').forEach(b => b.onclick = async () => {
+      const k = b.dataset.crun, body = { slug, action: k === 'preview' ? 'render' : k, preview: k === 'preview' };
+      const r = await api('/api/cinema/run', { method: 'POST', body });
+      watch(r.job, stEl, { stills: 'Đang vẽ ảnh xem thử', preview: 'Đang dựng bản nhanh', render: 'Đang dựng video' }[k], j => { if (j.code === 0) { toast('Xong'); pgCinema(); } });
+    });
+    c.querySelectorAll('[data-cdoc]').forEach(b => b.onclick = async () => {
+      const r = await api(`/api/cinema/file?slug=${encodeURIComponent(slug)}&name=${encodeURIComponent(b.dataset.cdoc)}`);
+      $('#cndlgt').textContent = b.textContent; $('#cndoc').textContent = r.text; cndlg.showModal();
+    });
+    c.querySelector('[data-cdel]').onclick = async () => { if (!confirm(`Chuyển "${slug}" vào thùng rác?`)) return; await fetch('/api/cinema?slug=' + encodeURIComponent(slug), { method: 'DELETE' }); pgCinema(); };
+  });
 }
 
 /* ================= NHÂN VẬT 3D (Blender, từ repo Skills) ================= */
@@ -564,7 +625,7 @@ async function pgSettings() {
         <div class="tintbox"><b>Claude Code</b> <span class="small muted">(gói Pro/Max)</span><p class="small muted" style="margin:4px 0 6px">Cài trong PowerShell rồi gõ <code>claude</code> một lần để đăng nhập:</p><code style="display:block;background:#fff;padding:6px 9px;border-radius:7px;font-size:12.5px">irm https://claude.ai/install.ps1 | iex</code></div></div>
       <div class="card"><div class="cap">🤖 Model AI cho từng việc</div>
         <p class="small muted" style="margin:0 0 8px">Việc cần sáng tạo dùng model mạnh, việc lặp lại dùng model nhẹ để tiết kiệm lượt dùng của gói Claude (hoặc tiền API).</p>
-        ${[['plan', '✍️ Viết kịch bản'], ['ideas', '🔥 Tìm & chấm chủ đề (tra web)'], ['edit', '🎛 Sửa cảnh bằng lời'], ['translate', '🌐 Dịch lồng tiếng'], ['subtitles', '💬 Phụ đề thêm, dịch .srt'], ['publish', '🚀 Gói đăng (tiêu đề, mô tả, tag)'], ['audit', '🛡 Kiểm duyệt chính sách']]
+        ${[['plan', '✍️ Viết kịch bản'], ['ideas', '🔥 Tìm & chấm chủ đề (tra web)'], ['edit', '🎛 Sửa cảnh bằng lời'], ['translate', '🌐 Dịch lồng tiếng'], ['subtitles', '💬 Phụ đề thêm, dịch .srt'], ['publish', '🚀 Gói đăng (tiêu đề, mô tả, tag)'], ['audit', '🛡 Kiểm duyệt chính sách'], ['cinema', '🎬 Điện ảnh (storyboard + code cảnh)']]
           .map(([k, n]) => `<div class="row" style="margin-top:6px"><span style="flex:1.3">${n}</span>${sel('agent.tiers.' + k, [['opus', 'Opus · mạnh nhất'], ['sonnet', 'Sonnet · cân bằng'], ['haiku', 'Haiku · nhanh, nhẹ']])}</div>`).join('')}
         <div class="row" style="margin-top:6px"><span style="flex:1.3">🎨 Ảnh AI (GPU, không dùng Claude)</span>${sel('visual.default_workflow', (s.workflows || ['sdxl_image']).map(w => [w, w]))}</div></div>
       <div class="card"><div class="cap">🎙 Giọng đọc &amp; phụ đề</div>

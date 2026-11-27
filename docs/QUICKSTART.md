@@ -82,3 +82,12 @@ Thay người que bằng nhân vật người thật dựng bằng Blender (bộ
 2. Chọn nhân vật mẫu (Mia, Rain Hero) hoặc **Tạo nhân vật mới** → **Sửa ngoại hình** → **Bảng xem trước** để duyệt.
 3. **Render động tác** (1 lần cho mỗi nhân vật; máy không có card NVIDIA mất ~15 phút cho 6 động tác chuẩn).
 4. Trình sửa cảnh → **Cài đặt video** → Nhân vật → chọn mục **🧍 Nhân vật 3D**. Cảnh "Người que diễn" sẽ dùng nhân vật 3D.
+
+## Chế độ Điện ảnh (bộ skill repo Skills)
+
+Video kiểu điện ảnh: Claude viết storyboard và code từng cảnh (hạt, chiều sâu, ánh sáng, nhân vật 3D), máy bạn dựng hình + nhạc + hiệu ứng âm thanh.
+
+1. Cần AI là **Claude Code** (Cài đặt → AI). Studio → **🎬 Điện ảnh** → **Cài thư viện dựng hình** (1 lần).
+2. Nhập chủ đề, thời lượng, khung, ngôn ngữ, chọn nhân vật 3D (đã render ở trang Nhân vật 3D) → **Viết storyboard & ảnh xem thử** (Claude làm 10–30 phút).
+3. Xem ảnh xem thử, Storyboard, Kiểm duyệt, SEO → **⚡ Dựng nhanh** để xem nhịp → **🎬 Dựng video**.
+4. Lệnh tương đương: `vf cinema new "chủ đề" --seconds 60 --char3d mia`, `vf cinema render <slug>`.

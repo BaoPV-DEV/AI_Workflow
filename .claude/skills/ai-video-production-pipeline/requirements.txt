@@ -1,0 +1,12 @@
+# Core (required)
+numpy
+pillow
+skia-python
+# Recommended
+scipy                     # faster audio filters
+opencv-python-headless    # ~3x faster bloom/grain
+# Optional
+bpy                       # Blender as a module: builds the 3D hero sprites (or install Blender itself)
+glfw                      # --gpu: skia OpenGL drawing on desktop GPUs
+pyttsx3                   # offline system voice on Windows/macOS (Linux: apt install festival festvox-us-slt-hts)
+# Also needed on PATH: ffmpeg + ffprobe (Windows: winget install Gyan.FFmpeg)

@@ -174,3 +174,12 @@ body { font: 14px/1.5 var(--font); color: var(--ink); background: var(--page); d
 .c3bd { padding: 12px 13px 6px; }
 .c3 .ac { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 13px; border-top: 1px solid var(--card-line); align-items: center; }
 .c3 .ac select { width: auto; font-size: 12px; padding: 3px 6px; }
+
+.cinegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 14px; margin-top: 14px; }
+.cine { background: #fff; border: 1px solid var(--card-line); border-radius: 14px; padding: 13px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.cinehead { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; }
+.cine .t { font-weight: 700; overflow-wrap: anywhere; }
+.cine .stills { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.cine .stills img { width: 100%; border-radius: 6px; display: block; aspect-ratio: 16/9; object-fit: cover; background: #222; }
+.cine .ac { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cine .outv { width: 100%; border-radius: 10px; background: #000; max-height: 360px; }

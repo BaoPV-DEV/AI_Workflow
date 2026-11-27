@@ -8,3 +8,4 @@ node_modules/
 .env
 .cache/
 .venv3d/
+.claude/skills/ai-video-production-pipeline/render_profile.json

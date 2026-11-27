@@ -48,6 +48,7 @@ agent:
     subtitles: haiku    # phụ đề thêm, dịch .srt
     publish: haiku      # tiêu đề, mô tả, tag
     audit: sonnet       # kiểm duyệt chính sách YouTube/TikTok
+    cinema: sonnet      # chế độ Điện ảnh: viết storyboard + code cảnh (skill repo Skills)
   # Tên model API ứng với từng mức (đổi khi Anthropic ra bản mới). Claude Code dùng thẳng opus/sonnet/haiku.
   models_by_tier:
     opus: claude-opus-5-5

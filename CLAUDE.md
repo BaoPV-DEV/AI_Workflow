@@ -9,6 +9,7 @@ Claude = bộ não (kịch bản → `project_manifest.json`). Engine local = c�
 - Sau khi sửa: `vf check <id>`, rồi `vf preview <id> --scenes sNNN` và xem ảnh trong `preview/`.
 - Sửa engine/template: chỉ file được chỉ định; thêm template xong chạy `vf catalog`.
 - Kênh mẫu, dàn ý video dài, kiểm duyệt chính sách, SEO: skill `video-strategy` (nguồn: repo BaoPV-DEV/Skills, cập nhật `vf skills-sync`). Trước khi đăng: `vf audit <id>`.
+- Video kiểu điện ảnh (animation từng khung, nhân vật 3D, nhạc/SFX tự tạo): skill `ai-video-production-pipeline` (nguyên bản repo Skills); dự án ở `workspace/_cinema/<slug>/`, giọng: `vf cinema voice <slug>`, dựng: `vf cinema render <slug>`.
 - Chủ đề hot: `vf trends --geo VN`; lọc theo `config/prompts/ideas.md` (bỏ chết chóc, chính trị, tin đồn, trẻ em).
 - Bản ngôn ngữ khác: tự dịch rồi dùng `engine.agent.director.translate(id, lang, texts=...)`, hoặc `vf translate`.
 - Trả lời người dùng bằng tiếng Việt, ngắn.
