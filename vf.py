@@ -7,9 +7,13 @@ import json
 import shutil
 import sys
 
+from engine import winhide
+
+winhide.setup()  # mở bằng Studio.vbs (pythonw): không terminal, log ra .cache/studio.log
 if sys.platform == "win32":
-    sys.stdout.reconfigure(encoding="utf-8")
-    sys.stderr.reconfigure(encoding="utf-8")
+    for _s in (sys.stdout, sys.stderr):
+        if hasattr(_s, "reconfigure"):
+            _s.reconfigure(encoding="utf-8")
 
 
 def _only(a):
@@ -375,6 +379,7 @@ def main(argv=None):
         if "--debug" in sys.argv or __import__("os").environ.get("VF_DEBUG"):
             raise
         print(f"✘ {e}", file=sys.stderr)
+        winhide.alert(f"Lỗi: {e}")
         return 1
 
 

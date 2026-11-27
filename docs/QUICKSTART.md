@@ -39,6 +39,9 @@ vf all meo_thich_hop
 vf studio
 ```
 
+Hoặc bấm đúp shortcut **AI Workflow Studio** (hay `Studio.vbs`): Studio chạy ẩn, không hiện cửa sổ terminal; đóng tab Studio là tự tắt.
+Cần xem log khi có lỗi: mở `.cache\studio.log`, hoặc chạy `Studio.bat debug` để có terminal như cũ.
+
 Trình duyệt mở `http://127.0.0.1:8765`. Bấm **Video của tôi → meo_thich_hop** để sửa lời, đổi cảnh, phát thử kèm giọng, rồi **Xuất video**.
 
 ## 4. Tạo video với chủ đề của bạn

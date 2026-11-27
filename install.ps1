@@ -116,7 +116,8 @@ Say "Kiem tra cai dat"
 
 $ws = New-Object -ComObject WScript.Shell
 $lnk = $ws.CreateShortcut((Join-Path ([Environment]::GetFolderPath("Desktop")) "AI Workflow Studio.lnk"))
-$lnk.TargetPath = Join-Path $Dir "Studio.bat"
+$lnk.TargetPath = Join-Path $env:SystemRoot "System32\wscript.exe"
+$lnk.Arguments = '"' + (Join-Path $Dir "Studio.vbs") + '"'   # mo Studio khong hien terminal
 $lnk.WorkingDirectory = $Dir
 $lnk.IconLocation = "$env:SystemRoot\System32\imageres.dll,18"
 $lnk.Save()
@@ -141,4 +142,4 @@ if (-not (Test-Path $demo)) { Copy-Item (Join-Path $Dir "examples\meo_thich_hop"
 Write-Host ""
 Write-Host "Xong! Mo Studio bang shortcut tren Desktop, hoac: $Dir\Studio.bat" -ForegroundColor Green
 Write-Host "Video mau 'meo_thich_hop' da co trong 'Video cua toi'. Bam 'Xuat video' de render." -ForegroundColor Green
-if (-not $NoLaunch) { Start-Process (Join-Path $Dir "Studio.bat") -WorkingDirectory $Dir }
+if (-not $NoLaunch) { Start-Process "wscript.exe" -ArgumentList ('"' + (Join-Path $Dir "Studio.vbs") + '"') -WorkingDirectory $Dir }

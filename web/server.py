@@ -13,7 +13,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from engine import align, catalog, config, manifest, pipeline, studio_api
+from engine import align, catalog, config, manifest, pipeline, studio_api, winhide
 
 WEB = Path(__file__).parent
 JOBS: dict[str, dict] = {}
@@ -54,7 +54,7 @@ def run_job(args: list[str]) -> str:
     job = JOBS[jid] = {"cmd": " ".join(args), "log": "", "done": False, "code": None}
 
     def go():
-        p = subprocess.Popen([sys.executable, "-u", str(config.ROOT / "vf.py"), *args], cwd=config.ROOT,
+        p = subprocess.Popen([winhide.console_python(), "-u", str(config.ROOT / "vf.py"), *args], cwd=config.ROOT,
                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
         for line in p.stdout:
             job["log"] += line
@@ -408,7 +408,7 @@ class H(SimpleHTTPRequestHandler):
                     args.append("--draft")
                 return self._json({"job": run_job(args)})
             if u == "/api/mcp-install":
-                r = subprocess.run([sys.executable, str(config.ROOT / "vf.py"), "mcp-install"], capture_output=True, text=True,
+                r = subprocess.run([winhide.console_python(), str(config.ROOT / "vf.py"), "mcp-install"], capture_output=True, text=True,
                                    encoding="utf-8", errors="replace", cwd=config.ROOT)
                 return self._json({"ok": r.returncode == 0, "log": r.stdout + r.stderr})
             if u == "/api/prompt":
@@ -449,7 +449,11 @@ def serve(port: int = 8765, open_browser: bool = True):
                 import time
                 time.sleep(1.2)
                 continue
-            print(f"✘ Cổng {port} đang bị một Studio cũ chiếm. Đóng cửa sổ Studio cũ (hoặc khởi động lại máy) rồi mở lại.")
+            msg = f"Cổng {port} đang bị một Studio cũ chiếm. Đóng Studio cũ (hoặc khởi động lại máy) rồi mở lại."
+            print(f"✘ {msg}")
+            if winhide.hidden():  # không có terminal: mở Studio đang chạy (nếu còn sống) và báo bằng hộp thoại
+                webbrowser.open(f"http://127.0.0.1:{port}")
+                winhide.alert(msg)
             return
     url = f"http://127.0.0.1:{port}"
     print(f"🎛  Web Studio: {url}  (đóng tab Studio là tự tắt; Ctrl+C để tắt ngay)")
