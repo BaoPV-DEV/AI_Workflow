@@ -395,3 +395,24 @@ def scene_info(cast: dict) -> dict:
 
 def fingerprint(cast: dict) -> list:
     return [(n, [(s["key"], s["frames"], s["mtime"]) for s in v["sets"]]) for n, v in scene_info(cast).items()]
+
+
+def apply_to_project(pid: str, cid: str) -> str:
+    """Gán nhân vật 3D cho nhân vật chính của video (người xuất hiện nhiều nhất trong acting)."""
+    from . import manifest
+    from collections import Counter
+    d, data = manifest.load(pid)
+    cast = data.get("cast") or {}
+    cnt = Counter(b.get("who") for s in data.get("scenes", []) for b in (s.get("acting") or []) if b.get("who"))
+    main = (cnt.most_common(1)[0][0] if cnt else None) or next(iter(cast), None) or "hero"
+    cast.setdefault(main, {})["model3d"] = cid
+    data["cast"] = cast
+    manifest.save(d, data)
+    return main
+
+
+def writer_note(cid: str) -> str:
+    """Gợi ý cho Claude khi viết kịch bản có nhân vật 3D."""
+    anims = sorted({x.split("_")[0] for x in next((c["sets"] for c in characters() if c["id"] == cid), [])})
+    return (f"Nhân vật chính là nhân vật 3D người thật '{cid}' (chỉ hiện trong cảnh stickman_stage): dùng stickman_stage cho phần lớn"
+            f" đoạn kể chuyện, 1 nhân vật chính xuyên suốt; ưu tiên các act tương ứng động tác đã có: {', '.join(anims) or 'idle, talk'}.")

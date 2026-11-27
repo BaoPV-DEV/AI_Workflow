@@ -374,10 +374,14 @@ class H(SimpleHTTPRequestHandler):
                 from engine.agent.director import plan
                 kw = {k: b.get(k) for k in ("style", "aspect", "lang", "tone", "series", "platforms", "subtitle_langs", "burn_captions")}
                 kw["seconds"] = int(float(b.get("minutes") or 1) * 60)
-                kw["notes"] = " ".join(x for x in (b.get("preset_notes"), b.get("extra")) if x)
+                c3 = b.get("char3d") or ""
+                from engine import char3d
+                kw["notes"] = " ".join(x for x in (b.get("preset_notes"), b.get("extra"), c3 and char3d.writer_note(c3)) if x)
 
                 def write_job():
                     d, errs = plan(b["topic"], genre=b.get("genre") or "explainer", **{k: v for k, v in kw.items() if v not in (None, "", [])})
+                    if c3:
+                        char3d.apply_to_project(d.name, c3)
                     return {"project_id": d.name, "errors": errs}
                 return self._json({"job": run_fn(write_job)})
             if u == "/api/narration":
@@ -388,6 +392,9 @@ class H(SimpleHTTPRequestHandler):
                 if b.get("series"):
                     data["series"] = b["series"]
                 d = new_project(data, b.get("title") or None)
+                if b.get("char3d"):
+                    from engine import char3d
+                    char3d.apply_to_project(d.name, b["char3d"])
                 return self._json({"project_id": d.name, "scenes": len(data["scenes"]), "errors": manifest.validate(data)})
             if u.startswith("/api/p/") and u.endswith("/publish"):
                 return self._json({"job": run_fn(studio_api.publish_pack, u.split("/")[3], b.get("platform", "YouTube"))})

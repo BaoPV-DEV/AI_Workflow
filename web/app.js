@@ -304,7 +304,8 @@ async function pgWrite(presetId) {
         <div class="row" style="align-items:flex-end">
           <div><label style="margin-top:0">Series</label><select id="wseries"><option value="">— không —</option>${SERIES.map(s => `<option ${s === W.series ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></div>
           <div><label style="margin-top:0">Số phút</label><input id="wmin" type="number" min="0.5" max="12" step="0.5" value="${W.minutes}"></div>
-          <div><label style="margin-top:0">Phong cách hình</label><select id="wstyle"><option value="">AI tự chọn</option>${Object.entries(META.styles).map(([k]) => `<option ${k === W.style ? 'selected' : ''}>${k}</option>`).join('')}</select></div></div>
+          <div><label style="margin-top:0">Phong cách hình</label><select id="wstyle"><option value="">AI tự chọn</option>${Object.entries(META.styles).map(([k]) => `<option ${k === W.style ? 'selected' : ''}>${k}</option>`).join('')}</select></div>
+          <div><label style="margin-top:0">Nhân vật chính</label>${char3dSelect('wchar', W.char3d)}</div></div>
       </div>
       <div class="card"><div class="cap">2 · Ngôn ngữ &amp; giọng văn</div>
         <div class="tintbox" style="margin-top:0"><div class="row">
@@ -330,7 +331,7 @@ async function pgWrite(presetId) {
     const b = collectWrite(); if (!b.topic) return $('#wtopic').focus();
     const pr2 = presets.find(p => p.id === b.preset);
     $('#wgo').disabled = true;
-    const r = await api('/api/write', { method: 'POST', body: { topic: b.topic, genre: b.genre, aspect: b.aspect, platforms: b.platforms, series: b.series, minutes: b.minutes, lang: b.lang, burn_captions: b.burn === 'karaoke', subtitle_langs: b.subs, tone: b.tone, extra: b.extra, style: b.style, preset_notes: pr2?.notes || '' } });
+    const r = await api('/api/write', { method: 'POST', body: { topic: b.topic, genre: b.genre, aspect: b.aspect, platforms: b.platforms, series: b.series, minutes: b.minutes, lang: b.lang, burn_captions: b.burn === 'karaoke', subtitle_langs: b.subs, tone: b.tone, extra: b.extra, style: b.style, preset_notes: pr2?.notes || '', char3d: b.char3d } });
     watch(r.job, $('#wst'), 'Claude đang viết kịch bản (1–3 phút)', j => {
       $('#wgo').disabled = false;
       if (j.code === 0) { WRITE = {}; toast(j.result.errors?.length ? `Đã viết, còn ${j.result.errors.length} lỗi nhỏ cần sửa` : 'Đã viết xong kịch bản'); go('editor', j.result.project_id); }
@@ -348,7 +349,14 @@ function collectWrite() {
   const presets = META.presets || [];
   const pr = presets.find(p => p.id === $('#wpreset').value);
   return { ...WRITE, topic: $('#wtopic').value.trim(), preset: $('#wpreset').value, genre: pr?.genre || WRITE.genre || 'explainer', aspect: WRITE.aspect, minutes: +$('#wmin').value || 1,
-    series: $('#wseries').value, style: $('#wstyle').value, lang: $('#wlang').value, burn: $('#wburn').value, tone: $('#wtone').value.trim(), extra: $('#wextra').value.trim() };
+    series: $('#wseries').value, style: $('#wstyle').value, lang: $('#wlang').value, burn: $('#wburn').value, tone: $('#wtone').value.trim(), extra: $('#wextra').value.trim(),
+    char3d: $('#wchar')?.value || '' };
+}
+/** Ô chọn nhân vật: người que hoặc nhân vật 3D đã render động tác. */
+function char3dSelect(id, cur) {
+  const ready = (META.char3d || []).filter(c => c.sets.length);
+  return `<select id="${id}"><option value="">Người que (mặc định)</option>${ready.map(c => `<option value="${esc(c.id)}" ${c.id === cur ? 'selected' : ''}>🧍 ${esc(c.name)} (3D)</option>`).join('')}
+    ${(META.char3d || []).length > ready.length ? '<option disabled>— nhân vật 3D khác: render động tác trước —</option>' : ''}</select>`;
 }
 
 /* ================= TỰ VIẾT LỜI DẪN ================= */
@@ -367,6 +375,7 @@ async function pgNarration() {
           <label style="margin-top:0">Ngôn ngữ giọng đọc</label><select id="nlang">${langOptions(NAR.lang)}</select>
           <label>Khung hình</label>${segHtml(['9:16', '16:9', '1:1', '4:5'], NAR.aspect, 'nasp')}
           <label>Phong cách hình</label><select id="nstyle">${Object.keys(META.styles).map(k => `<option>${k}</option>`).join('')}</select>
+          <label>Nhân vật chính</label>${char3dSelect('nchar', '')}
           <label>Series</label><select id="nseries"><option value="">— không —</option>${SERIES.map(s => `<option>${esc(s)}</option>`).join('')}</select></div>
         <button class="gbtn" id="ngo" style="width:100%;margin-top:6px">✂️ Chia cảnh (0 token)</button>
         <p class="small muted" style="margin:10px 0 0">Mẹo: viết số bằng chữ số để có thẻ con số ("2600 lần"), liệt kê bằng dấu phẩy ("a, b và c"), trích dẫn trong ngoặc kép.</p></div>
@@ -375,7 +384,7 @@ async function pgNarration() {
   $('#ntext').oninput = () => { const w = $('#ntext').value.split(/\s+/).filter(Boolean).length; $('#nstat').textContent = `${w} từ · khoảng ${Math.round(w / 2.5)} giây · ~${Math.max(1, Math.round(w / 18))} cảnh`; };
   $('#ngo').onclick = async () => {
     const text = $('#ntext').value.trim(); if (text.split(/\s+/).length < 5) return $('#ntext').focus();
-    const r = await api('/api/narration', { method: 'POST', body: { text, title: $('#ntitle').value.trim(), lang: $('#nlang').value, aspect: NAR.aspect, style: $('#nstyle').value, series: $('#nseries').value } });
+    const r = await api('/api/narration', { method: 'POST', body: { text, title: $('#ntitle').value.trim(), lang: $('#nlang').value, aspect: NAR.aspect, style: $('#nstyle').value, series: $('#nseries').value, char3d: $('#nchar').value } });
     if (r.error) return toast(r.error, true);
     toast(`Đã chia ${r.scenes} cảnh`); go('editor', r.project_id);
   };
