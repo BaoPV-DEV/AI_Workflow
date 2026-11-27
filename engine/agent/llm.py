@@ -212,7 +212,11 @@ def run_cli(prompt: str, role: str = "plan", tools: str = "", cwd: str | None = 
         raise RuntimeError(f"Claude Code lỗi (mã {r.returncode}): {(r.stderr or r.stdout)[-600:]}\n"
                            "Đã đăng nhập chưa? Mở PowerShell, gõ `claude` một lần để đăng nhập.")
     if out.get("is_error"):
-        raise RuntimeError(f"Claude Code báo lỗi: {str(out.get('result'))[:600]}")
+        msg = str(out.get("result"))[:600]
+        if re.search(r"authenticat|oauth|login|401|expired|credential", msg, re.I):
+            msg += ("\n→ Phiên đăng nhập Claude Code đã hết hạn. Mở PowerShell, gõ `claude`, rồi gõ /login và đăng nhập"
+                    " bằng tài khoản Claude (Pro/Max). Xong gõ /exit và bấm lại nút này, không cần mở lại Studio.")
+        raise RuntimeError(f"Claude Code báo lỗi: {msg}")
     _log_cli(out, model)
     return out
 
