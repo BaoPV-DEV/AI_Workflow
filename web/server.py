@@ -357,7 +357,12 @@ class H(SimpleHTTPRequestHandler):
                 elif tab:
                     TABS.pop(tab, None)
                     LAST_BYE = time.time()
-                return self._json({"ok": True, "tabs": len(TABS), "busy": _busy()})
+                return self._json({"ok": True, "tabs": len(TABS), "busy": _busy(), "stale": _code_mtime() > CODE_AT_START + 1})
+            if u == "/api/restart":
+                if _busy():
+                    return self._json({"error": "Đang có tác vụ chạy (render, giọng…). Chờ xong rồi khởi động lại."}, 409)
+                _restart()
+                return self._json({"ok": True})
             if u == "/api/shutdown":
                 threading.Timer(0.3, lambda: os._exit(0)).start()
                 return self._json({"ok": True})
@@ -472,6 +477,23 @@ class H(SimpleHTTPRequestHandler):
             return self._json({"error": f"{type(e).__name__}: {e}"}, 500)
 
 
+def _code_mtime() -> float:
+    """Lần sửa code Python gần nhất (vf.py, web/, engine/). Dùng để biết Studio đang chạy bản cũ sau git pull."""
+    files = [config.ROOT / "vf.py", *(config.ROOT / "web").glob("*.py"), *(config.ROOT / "engine").rglob("*.py")]
+    return max((f.stat().st_mtime for f in files if f.exists()), default=0)
+
+
+CODE_AT_START = _code_mtime()
+PORT = 8765
+
+
+def _restart():
+    """Mở Studio bản mới (không mở thêm tab) rồi tắt bản đang chạy; bản mới tự chờ cổng rảnh."""
+    subprocess.Popen([winhide.console_python() if not winhide.hidden() else sys.executable, str(config.ROOT / "vf.py"),
+                      "studio", "--no-open", "--port", str(PORT)], cwd=config.ROOT)
+    threading.Timer(0.4, lambda: os._exit(0)).start()
+
+
 def _stop_old(port: int) -> bool:
     """Studio cũ còn chạy trên cổng này? Bản mới có /api/shutdown; bản rất cũ thì không tắt được từ xa."""
     import urllib.request
@@ -485,16 +507,21 @@ def _stop_old(port: int) -> bool:
 
 
 def serve(port: int = 8765, open_browser: bool = True):
+    global PORT
+    PORT = port
     config.workspace().mkdir(exist_ok=True)
     srv = None
-    for attempt in range(2):
+    import time
+    for attempt in range(6):
         try:
             srv = ThreadingHTTPServer(("127.0.0.1", port), H)
             break
         except OSError:
             if attempt == 0 and _stop_old(port):
-                import time
                 time.sleep(1.2)
+                continue
+            if 0 < attempt < 5:  # vừa khởi động lại: chờ bản cũ nhả cổng
+                time.sleep(1)
                 continue
             msg = f"Cổng {port} đang bị một Studio cũ chiếm. Đóng Studio cũ (hoặc khởi động lại máy) rồi mở lại."
             print(f"✘ {msg}")

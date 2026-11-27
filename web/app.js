@@ -590,7 +590,24 @@ async function pgSettings() {
 
 /* báo máy chủ tab còn mở; đóng tab thì máy chủ tự tắt (Cài đặt: studio.auto_exit) */
 const TAB_ID = Math.random().toString(36).slice(2, 10);
-const ping = () => fetch('/api/ping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tab: TAB_ID }) }).catch(() => {});
+const ping = () => fetch('/api/ping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tab: TAB_ID }) })
+  .then(r => r.json()).then(r => { if (r.stale) staleBanner(); }).catch(() => {});
+/* sau git pull: giao diện đã mới nhưng máy chủ Python vẫn là bản cũ → mời khởi động lại */
+function staleBanner() {
+  if ($('#stale')) return;
+  const d = document.createElement('div');
+  d.id = 'stale';
+  d.innerHTML = '🔄 Studio vừa được cập nhật code mới. Khởi động lại để dùng bản mới (video và cài đặt giữ nguyên). <button class="btn2 pri">Khởi động lại</button>';
+  Object.assign(d.style, { position: 'fixed', top: '10px', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: '#fff7ed', border: '1px solid #fdba74', color: '#7c2d12', padding: '8px 14px', borderRadius: '12px', boxShadow: '0 8px 24px #0002', display: 'flex', gap: '10px', alignItems: 'center', fontSize: '14px' });
+  document.body.appendChild(d);
+  d.querySelector('button').onclick = async () => {
+    const r = await api('/api/restart', { method: 'POST', body: {} });
+    if (r.error) return toast(r.error, true);
+    d.innerHTML = '<span class="spin"></span> Đang khởi động lại…';
+    for (let i = 0; i < 30; i++) { await new Promise(z => setTimeout(z, 1000)); try { const m = await fetch('/api/meta'); if (m.ok) return location.reload(); } catch { } }
+    d.textContent = 'Không khởi động lại được: mở lại bằng shortcut AI Workflow Studio.';
+  };
+}
 ping(); setInterval(ping, 5000);
 document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && ping());
 window.addEventListener('pagehide', () => navigator.sendBeacon('/api/bye', JSON.stringify({ tab: TAB_ID })));
