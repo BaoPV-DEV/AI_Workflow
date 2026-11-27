@@ -1,6 +1,10 @@
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const api = async (u, o = {}) => { const r = await fetch(u, { headers: { 'Content-Type': 'application/json' }, ...o, body: o.body ? JSON.stringify(o.body) : undefined }); return r.json(); };
+const api = async (u, o = {}) => {
+  const r = await fetch(u, { headers: { 'Content-Type': 'application/json' }, ...o, body: o.body ? JSON.stringify(o.body) : undefined });
+  if (r.status === 404 && u.startsWith('/api/') && typeof staleBanner === 'function') staleBanner(true);  // máy chủ cũ chưa có chức năng này
+  return r.json();
+};
 const ENGINE = ['audio_path', 'duration', 'word_timings', 'speech'];
 const GENRES = { animation: 'Hoạt hình người que', motion_graphic: 'Motion graphics', news: 'Tin tức', explainer: 'Giải thích' };
 const TPL_NAMES = { stickman_stage: 'Người que diễn', title_card_neon: 'Tiêu đề', kinetic_text: 'Chữ theo giọng', stat_card: 'Con số', bullet_list: 'Danh sách ý', bar_chart: 'Biểu đồ cột', compare_split: 'So sánh', timeline: 'Dòng thời gian', quote_card: 'Trích dẫn', headline_news: 'Bản tin' };

@@ -29,13 +29,22 @@ async function route() {
     setTimeout(() => { fitFrame && fitFrame(); M && renderTimeline(); }, 50);
     return;
   }
-  await ({ home: pgHome, library: pgLibrary, trends: pgTrends, write: pgWrite, narration: pgNarration, gpu: pgGpu, render: pgRender, char3d: pgChar3d, cinema: pgCinema, tools: pgTools, settings: pgSettings })[p](arg2);
+  try {
+    await ({ home: pgHome, library: pgLibrary, trends: pgTrends, write: pgWrite, narration: pgNarration, gpu: pgGpu, render: pgRender, char3d: pgChar3d, cinema: pgCinema, tools: pgTools, settings: pgSettings })[p](arg2);
+  } catch (e) {  // không để trang trắng: báo lỗi + cách xử lý
+    console.error(e);
+    html(document.getElementById('pg-' + p), `<div class="wrap"><div class="card"><div class="cap">Trang này chưa mở được</div>
+      <p class="small">${esc(e.message || e)}</p><p class="small muted">Thường do Studio đang chạy bản cũ sau khi cập nhật code: bấm <b>Khởi động lại</b> ở thanh trên cùng, hoặc tắt Studio và mở lại bằng shortcut.</p></div></div>`);
+    staleBanner(true);
+  }
 }
 window.addEventListener('hashchange', route);
 document.querySelectorAll('.nav').forEach(n => n.onclick = () => go(n.dataset.pg));
 
+const NEED_SERVER = 'studio-4';
 async function appBoot() {
   META = await api('/api/meta');
+  if (META.version !== NEED_SERVER) staleBanner(true);
   $('#addTpl').innerHTML = Object.keys(META.templates).map(k => `<option value="${k}">${esc(TPL_NAMES[k] || k)}</option>`).join('');
   bindKeys();
   new ResizeObserver(() => CURPAGE === 'editor' && fitFrame()).observe($('#stage'));
@@ -654,7 +663,7 @@ const TAB_ID = Math.random().toString(36).slice(2, 10);
 const ping = () => fetch('/api/ping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tab: TAB_ID }) })
   .then(r => r.json()).then(r => { if (r.stale) staleBanner(); }).catch(() => {});
 /* sau git pull: giao diện đã mới nhưng máy chủ Python vẫn là bản cũ → mời khởi động lại */
-function staleBanner() {
+function staleBanner(old) {
   if ($('#stale')) return;
   const d = document.createElement('div');
   d.id = 'stale';
@@ -662,7 +671,13 @@ function staleBanner() {
   Object.assign(d.style, { position: 'fixed', top: '10px', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: '#fff7ed', border: '1px solid #fdba74', color: '#7c2d12', padding: '8px 14px', borderRadius: '12px', boxShadow: '0 8px 24px #0002', display: 'flex', gap: '10px', alignItems: 'center', fontSize: '14px' });
   document.body.appendChild(d);
   d.querySelector('button').onclick = async () => {
-    const r = await api('/api/restart', { method: 'POST', body: {} });
+    const r0 = await fetch('/api/restart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    if (r0.status === 404) {  // máy chủ quá cũ, chưa có nút khởi động lại: tắt nó, người dùng mở lại bằng shortcut
+      await fetch('/api/shutdown', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
+      d.innerHTML = '✔ Đã tắt Studio cũ. Bấm đúp shortcut <b>AI Workflow Studio</b> để mở bản mới.';
+      return;
+    }
+    const r = await r0.json();
     if (r.error) return toast(r.error, true);
     d.innerHTML = '<span class="spin"></span> Đang khởi động lại…';
     for (let i = 0; i < 30; i++) { await new Promise(z => setTimeout(z, 1000)); try { const m = await fetch('/api/meta'); if (m.ok) return location.reload(); } catch { } }

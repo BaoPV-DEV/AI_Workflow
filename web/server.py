@@ -20,7 +20,7 @@ JOBS: dict[str, dict] = {}
 MIME = {".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8",
         ".json": "application/json; charset=utf-8", ".svg": "image/svg+xml", ".mp4": "video/mp4", ".wav": "audio/wav",
         ".mp3": "audio/mpeg", ".jpg": "image/jpeg", ".png": "image/png", ".srt": "text/plain; charset=utf-8"}
-VERSION = "studio-3"
+VERSION = "studio-4"  # tăng khi web/app.js cần API mới; giao diện so khớp để báo máy chủ cũ
 
 # ---- tự tắt khi không còn tab nào mở (đóng tab = đóng cổng)
 TABS: dict[str, float] = {}
@@ -269,7 +269,7 @@ class H(SimpleHTTPRequestHandler):
                 return self._json(char3d.load_spec(self._q().get("id", "")))
             if u == "/api/meta":
                 acts = config.library("actions")
-                return self._json({"styles": {s: config.style(s) for s in config.list_styles()},
+                return self._json({"version": VERSION, "styles": {s: config.style(s) for s in config.list_styles()},
                                    "templates": catalog.templates(with_demo=True),
                                    "actions": {k: v.get("label", k) for k, v in acts["actions"].items()},
                                    "characters": config.library("characters")["characters"],
