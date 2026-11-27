@@ -96,7 +96,7 @@ async function pgChar3d() {
         <button class="btn2" data-edit="${esc(c.id)}">✏️ Sửa ngoại hình</button>
         <span class="st small muted" data-st="${esc(c.id)}"></span></div></div>`;
   html(page('char3d'), `<div class="wrap">
-    <div class="ph"><h1 style="white-space:nowrap">🧍 Nhân vật 3D</h1><p>Nhân vật người thật dựng bằng Blender (bộ hero3d của repo Skills). Mỗi nhân vật render <b>1 lần</b>, mọi video sau dùng lại.
+    <div class="ph" style="display:block"><h1>🧍 Nhân vật 3D</h1><p class="muted" style="margin:6px 0 0">Nhân vật người thật dựng bằng Blender (bộ hero3d của repo Skills). Mỗi nhân vật render <b>1 lần</b>, mọi video sau dùng lại.
       Dùng trong video: Trình sửa cảnh → Cài đặt video → Nhân vật → chọn mục <b>🧍 Nhân vật 3D</b> (chỉ áp cho cảnh "Người que diễn").</p></div>
     <div class="card"><div class="cap">Cài đặt</div>
       ${st.ready ? `<p class="small">✔ Blender sẵn sàng · ${st.fast_gpu ? `Card <b>${esc(st.gpu)}</b>: render nhanh` : `${st.gpu ? `Card ${esc(st.gpu)} yếu, ngang CPU` : 'Không có card NVIDIA'}: render bằng CPU (chậm, nên để chạy lúc rảnh)`}</p>`

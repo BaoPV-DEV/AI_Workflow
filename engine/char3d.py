@@ -229,16 +229,23 @@ def _run_builder(spec: dict, args: list[str]) -> None:
     tmp.unlink(missing_ok=True)
 
 
-def sheet(cid: str, quality: str = "nhap") -> Path:
+def sheet(cid: str, quality: str = "nhap", force: bool = False) -> Path:
     """Bảng xem trước (trước, 3/4, nghiêng, sau, mặt) để duyệt trước khi render động tác."""
-    import importlib.util
     s = load_spec(cid)
     q = QUALITY[quality]
-    _run_builder(s, ["--sheet", "--res", str(min(q["res"], 720)), "--samples", str(q["samples"])] + (["--fast"] if q["fast"] else []))
-    spec_ = importlib.util.spec_from_file_location("make_character", KIT / "make_character.py")
-    mc = importlib.util.module_from_spec(spec_)
-    spec_.loader.exec_module(mc)
-    out = mc.make_sheet(out_dir() / s["id"] / "_sheet", s)
+    folder = out_dir() / s["id"] / "_sheet"
+    views = [folder / f"{v}.png" for v in ("front", "front34", "side", "back", "face", "head_back")]
+    fresh = all(f.exists() for f in views) and min(f.stat().st_mtime for f in views) > spec_path(cid).stat().st_mtime
+    if force or not fresh:  # ảnh đã render sau lần sửa ngoại hình cuối thì chỉ ghép lại, khỏi chạy Blender
+        _run_builder(s, ["--sheet", "--res", str(min(q["res"], 720)), "--samples", str(q["samples"])] + (["--fast"] if q["fast"] else []))
+    # Ghép bảng bằng Python của Blender (.venv3d có sẵn Pillow), không bắt Studio phải cài thêm thư viện ảnh.
+    code = ("import json,sys; sys.path.insert(0, sys.argv[1]); import make_character as mc; "
+            "print(mc.make_sheet(__import__('pathlib').Path(sys.argv[2]), json.loads(open(sys.argv[3], encoding='utf-8').read())))")
+    r = subprocess.run([blender_python(), "-c", code, str(KIT), str(folder), str(spec_path(cid))],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if r.returncode:
+        raise RuntimeError(f"Ghép bảng nhân vật lỗi: {(r.stderr or r.stdout).strip().splitlines()[-1]}")
+    out = Path(r.stdout.strip().splitlines()[-1])
     print(f"✔ Bảng nhân vật: {out}")
     return out
 
