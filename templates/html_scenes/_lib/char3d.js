@@ -76,6 +76,7 @@
         this._say = text; this.bubble.innerHTML = '';
         if (text) {
           const fs = Math.max(26, this.S * 0.075), w = Math.min(text.length * fs * 0.55 + fs * 1.4, this.S * 2.4);
+          this._bfs = fs; this._bw = w;
           el('rect', { x: -w / 2, y: -fs * 2.2, width: w, height: fs * 1.8, rx: fs * 0.6, fill: '#fff', stroke: '#222', 'stroke-width': 4 }, this.bubble);
           el('path', { d: `M-10 ${-fs * 0.42} L4 ${fs * 0.3} L12 ${-fs * 0.42}`, fill: '#fff', stroke: '#222', 'stroke-width': 4, 'stroke-linejoin': 'round' }, this.bubble);
           el('text', { x: 0, y: -fs * 0.95, 'text-anchor': 'middle', 'font-size': fs, 'font-weight': 700, 'font-family': 'var(--font)', fill: '#111', text }, this.bubble);

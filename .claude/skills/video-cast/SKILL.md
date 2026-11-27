@@ -9,6 +9,7 @@ Nhân vật (`library/characters.json` → dùng trong manifest `cast: {"Tên": 
 - Phân vai theo chức năng: người học (nhỏ scale 0.78-0.85, màu tươi), người biết (1.0-1.08, màu trầm), người phản bác (mũ/dáng lạ).
 - Phân biệt bằng hình bóng: chiều cao, mũ (`hat`), `head` hollow/filled/solid. Hai nhân vật không trùng `shirt`.
 - Tên 1-2 âm tiết, không dấu.
+- Màu áo tương phản với nền cảnh hay dùng (nền xanh → đỏ/cam/vàng, nền tối → màu sáng, nền ấm → xanh lam/trắng); engine tự thêm viền sáng và làm dịu nền, nhưng chọn màu đúng vẫn quan trọng.
 
 Động tác (`library/actions.json`, rig 11 khớp, dùng chung mọi nhân vật):
 - Góc độ: 0 buông xuống, 90 chỉa ngang ra trước, 180 giơ thẳng lên, âm = ra sau. `fa/ba` tay trước/sau (1 trên, 2 dưới), `fl/bl` chân, `lean`, `head`, `lift` (nhảy). Tay tự cộng `lean`.

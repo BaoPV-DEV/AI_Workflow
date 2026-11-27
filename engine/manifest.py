@@ -101,3 +101,20 @@ def strip_engine_fields(data: dict) -> dict:
     out = {k: v for k, v in data.items() if k != "scenes"}
     out["scenes"] = [{k: v for k, v in s.items() if k not in ENGINE_FIELDS} for s in data.get("scenes", [])]
     return out
+
+
+def lint(data: dict) -> list[str]:
+    """Cảnh báo bố cục (không chặn): chữ dài, quá nhiều đồ vật dễ chồng lên người/bong bóng."""
+    out = []
+    for s in data.get("scenes", []):
+        if s.get("template_name") != "stickman_stage":
+            continue
+        sid, p = s.get("scene_id"), s.get("props") or {}
+        if len(p.get("items") or []) > 2:
+            out.append(f"cảnh {sid}: {len(p['items'])} items (nên ≤2, dễ chật chỗ)")
+        if len((p.get("title") or "").replace("*", "").split()) > 6:
+            out.append(f"cảnh {sid}: title dài hơn 6 từ")
+        for b in s.get("acting") or []:
+            if len((b.get("say") or "").split()) > 5:
+                out.append(f"cảnh {sid}: bong bóng '{b['say'][:30]}…' dài (nên ≤4 từ)")
+    return out

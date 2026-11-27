@@ -26,7 +26,86 @@
 <script src="_lib/char3d.js"></script>
 </head><body>
 <script>
-let svg, sticks = {}, tracks, items = [], titleEl, ground, S, input, bd;
+let svg, sticks = {}, tracks, items = [], titleEl, ground, S, input, bd, titleBottom, safeBottom, dark;
+
+/* Bố cục tự động: tiêu đề ≤2 dòng, nhân vật dưới vùng tiêu đề, đồ vật né nhân vật/bong bóng/tiêu đề/phụ đề,
+ * bong bóng thoại không chồng nhau và không lấn tiêu đề. Màu: nền dịu + lớp "không khí" để nhân vật nổi lên,
+ * chữ/đồ vật đổi màu theo nền sáng/tối. */
+const PAD = 10;
+
+function fitTitle(el, W, H, portrait) {
+  const box = el.firstChild;
+  let fs = parseFloat(getComputedStyle(box).fontSize);
+  const lh = () => parseFloat(getComputedStyle(box).lineHeight) || fs * 1.05;
+  for (let i = 0; i < 14 && box.getBoundingClientRect().height > lh() * 2.15 && fs > H * 0.035; i++) { fs *= 0.92; box.style.fontSize = fs + 'px'; }
+  return box.getBoundingClientRect().bottom - el.ownerDocument.getElementById('vf-root').getBoundingClientRect().top;
+}
+
+function placeItems(list, W, H, names, cast) {
+  // chiếm chỗ theo thời gian: lấy mẫu vị trí nhân vật (kể cả bong bóng thoại) trong lúc đồ vật còn hiện
+  const fsB = Math.max(26, S * 0.075), placed = [];
+  const sayW = n => Math.max(0, ...(input.acting || []).filter(b => b.who === n && b.say).map(b => Math.min(b.say.length * fsB * 0.55 + fsB * 1.4, S * 2.4)));
+  return list.map(it => {
+    let fs = (it.size || 0.1) * W;
+    const txt = it.emoji || it.text || '';
+    const iw = () => (it.emoji ? fs * 0.6 : Math.max(fs * 0.8, txt.length * fs * 0.32)), ih = () => fs * 0.6;
+    const t0 = it.t, t1 = input.duration || 6, busy = [];
+    for (const n of names) {
+      const hw = Math.max(S * 0.26, sayW(n) / 2);
+      for (let t = t0; t <= t1 + 0.01; t += 0.25) { const s = VF.stick.stateAt(tracks[n], t, VF.lib, W); busy.push([s.x - hw, s.x + hw]); }
+    }
+    for (const p of placed) busy.push([p.x - p.w, p.x + p.w]);
+    const headTop = ground - S * 1.12;
+    let x = (it.x ?? 0.5) * W, y = (it.y ?? 0.4) * H;
+    for (let k = 0; k < 3; k++) {
+      const w = iw(), h = ih();
+      y = Math.min(Math.max(y, titleBottom + h + PAD), safeBottom - h - PAD);
+      const hitsChar = y + h > headTop - fsB * 2.4;             // cùng tầng cao với người + bong bóng
+      const free = [];
+      let lo = w + PAD;
+      const segs = busy.map(([a, b]) => [a - w - PAD, b + w + PAD]).sort((a, b) => a[0] - b[0]);
+      for (const [a, b] of segs) { if (a > lo) free.push([lo, a]); lo = Math.max(lo, b); }
+      if (W - w - PAD > lo) free.push([lo, W - w - PAD]);
+      if (!hitsChar) break;
+      const inFree = free.some(([a, b]) => x >= a && x <= b);
+      if (inFree) break;
+      const cand = free.map(([a, b]) => Math.min(Math.max(x, a), b)).sort((a, b) => Math.abs(a - x) - Math.abs(b - x))[0];
+      if (cand !== undefined) { x = cand; break; }
+      // không còn khe ngang: đưa lên khoảng trống giữa tiêu đề và đầu nhân vật, nếu chật thì thu nhỏ
+      const top = titleBottom + h + PAD, bottom = headTop - fsB * 2.4 - h;
+      if (bottom > top) { y = (top + bottom) / 2; break; }
+      fs *= 0.72;
+    }
+    placed.push({ x, w: iw() });
+    return { ...it, _x: x, _y: y, _fs: fs };
+  });
+}
+
+function layoutBubbles(W) {
+  const live = Object.values(sticks).filter(st => st._say && st.head && st._bw && +st.bubble.getAttribute('opacity') > 0.01);
+  const boxes = live.map(st => {
+    const fs = st._bfs, w = st._bw, h = fs * 2.5;            // khung bong bóng + đuôi
+    let cx = st.head[0], ty = st.head[1] - (st.r ? st.r * 1.7 : st.S * 0.12);
+    return { st, fs, w, h, cx, ty };
+  });
+  for (const b of boxes) {
+    b.cx = Math.min(Math.max(b.cx, b.w / 2 + PAD), W - b.w / 2 - PAD);
+    b.ty = Math.max(b.ty, titleBottom + b.fs * 2.2 + PAD);   // đỉnh bong bóng không lấn tiêu đề
+  }
+  boxes.sort((a, b) => a.cx - b.cx);
+  for (let i = 1; i < boxes.length; i++) {                  // tách bong bóng chồng nhau
+    const a = boxes[i - 1], b = boxes[i];
+    const over = (a.cx + a.w / 2 + PAD) - (b.cx - b.w / 2);
+    const vOver = Math.abs(a.ty - b.ty) < a.fs * 2.2;
+    if (over > 0 && vOver) {
+      const roomL = a.cx - a.w / 2 - PAD, roomR = W - PAD - (b.cx + b.w / 2);
+      const shiftL = Math.min(over / 2, roomL), shiftR = Math.min(over - shiftL, roomR);
+      a.cx -= shiftL; b.cx += shiftR;
+      if (over - shiftL - shiftR > 1) b.ty += b.fs * 2.3;   // vẫn chật: bong bóng sau xuống thấp hơn
+    }
+  }
+  for (const b of boxes) b.st.bubble.setAttribute('transform', `translate(${b.cx} ${b.ty})`);
+}
 
 VF.scene({
   setup(inp, root) {
@@ -34,36 +113,67 @@ VF.scene({
     const { el } = VF, W = inp.width, H = inp.height, portrait = H > W, p = inp.props || {};
     ground = portrait ? H * 0.69 : H * 0.8;
     S = (portrait ? W * 0.5 : H * 0.46) * (inp.props?.zoom || 1);
+    safeBottom = portrait ? H * 0.8 : H * 0.84;                // dưới đó là vùng phụ đề
     svg = el('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, class: 'layer' }, root);
-    const backG = el('g', {}, svg), itemsG = el('g', {}, svg), figG = el('g', {}, svg), frontG = el('g', {}, svg);
+    const backG = el('g', {}, svg), airG = el('g', {}, svg), itemsG = el('g', {}, svg), figG = el('g', {}, svg), frontG = el('g', {}, svg);
     bd = VF.backdrops.draw(backG, p.backdrop || 'plain', { W, H, gy: ground, style: inp.style || {}, time: p.time || 'day', weather: p.weather || 'none' }, frontG);
-    if (bd.dark && !(inp.style || {}).bg?.match(/^#[0-3]/)) figG.setAttribute('style', 'filter: drop-shadow(0 0 3px rgba(255,255,255,.95)) drop-shadow(0 0 1px #fff)');
+    dark = bd.dark || /^#[0-3]/.test((inp.style || {}).bg || '');
+    // nền dịu bớt + lớp không khí phía sau nhân vật → người và cảnh tách lớp, vẫn hoà màu
+    backG.setAttribute('style', 'filter: saturate(.82)');
+    el('rect', { x: 0, y: 0, width: W, height: H, fill: dark ? '#0b1020' : '#ffffff', opacity: dark ? 0.22 : 0.2 }, airG);
+    const glow = el('radialGradient', { id: 'stgAir', cx: 0.5, cy: 0.62, r: 0.55 }, el('defs', {}, svg));
+    el('stop', { offset: 0, 'stop-color': dark ? '#1b2440' : '#ffffff', 'stop-opacity': dark ? 0.35 : 0.35 }, glow);
+    el('stop', { offset: 1, 'stop-color': dark ? '#1b2440' : '#ffffff', 'stop-opacity': 0 }, glow);
+    el('rect', { x: 0, y: 0, width: W, height: H, fill: 'url(#stgAir)' }, airG);
+    // viền tách nền: người que = viền sáng kiểu sticker; nhân vật 3D = bóng đổ mềm (viền trắng trông giả)
+    const css0 = getComputedStyle(document.documentElement), ink = css0.getPropertyValue('--ink').trim();
+    const lum = c => { const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(c || ''); return m ? (0.299 * parseInt(m[1], 16) + 0.587 * parseInt(m[2], 16) + 0.114 * parseInt(m[3], 16)) / 255 : 0; };
+    const STICK_FX = lum(ink) > 0.55   // nét sáng → viền tối; nét tối → viền sáng (kiểu sticker), luôn ngược màu nét
+      ? 'drop-shadow(0 0 2px rgba(0,0,0,.85)) drop-shadow(0 0 1px rgba(0,0,0,.9))'
+      : dark ? 'drop-shadow(0 0 3px rgba(255,255,255,.95)) drop-shadow(0 0 1px #fff)'
+             : 'drop-shadow(0 0 2px rgba(255,255,255,.95)) drop-shadow(0 1px 1px rgba(0,0,0,.18))';
+    const C3D_FX = dark ? 'drop-shadow(0 0 6px rgba(160,190,255,.35))' : 'drop-shadow(0 3px 6px rgba(0,0,0,.25))';
+    frontG.setAttribute('style', 'opacity:.9');
     const css = getComputedStyle(document.documentElement);
     const colors = { ink: css.getPropertyValue('--ink').trim(), a1: css.getPropertyValue('--a1').trim(), a2: css.getPropertyValue('--a2').trim(), a3: css.getPropertyValue('--a3').trim() };
     const cast = Object.keys(inp.cast || {}).length ? inp.cast : { hero: {} };
     const names = Object.keys(cast).filter(n => !inp.acting.length || inp.acting.some(b => b.who === n));
     if (!names.length) names.push(Object.keys(cast)[0]);
-    sticks = {};
+    // tiêu đề trước: cần biết đáy tiêu đề để xếp mọi thứ khác
+    titleBottom = portrait ? H * 0.05 : H * 0.04;
+    if (p.title) {
+      titleEl = el('div', { class: 'layer center title fs-l' }, root);
+      Object.assign(titleEl.style, { bottom: 'auto', height: (portrait ? H * 0.26 : H * 0.24) + 'px', padding: '0 5%', paddingTop: portrait ? H * 0.06 + 'px' : 0 });
+      const tt = el('div', { class: 'tt' }, titleEl);   // 1 khối duy nhất: chữ tô màu không bị tách dòng
+      tt.innerHTML = p.title.replace(/\*(.+?)\*/g, '<span class="hl">$1</span>');
+      Object.assign(tt.style, { maxWidth: '100%', color: dark ? '#fff' : 'var(--ink)',
+        textShadow: dark ? '0 2px 10px rgba(0,0,0,.7), 0 0 2px rgba(0,0,0,.9)' : '0 0 3px #fff, 0 0 8px rgba(255,255,255,.9), 0 0 2px #fff' });
+      titleEl._t = VF.at(p.title_at, 0);
+      titleBottom = fitTitle(titleEl, W, H, portrait) + H * 0.01;
+    } else titleEl = null;
+    // người không được chạm vùng tiêu đề: thu nhỏ nếu cần
+    const fsB = Math.max(26, S * 0.075), anySay = (inp.acting || []).some(b => b.say);
+    const need = titleBottom + (anySay ? fsB * 2.6 : PAD) + S * 1.12;
+    if (need > ground) S = Math.max(S * 0.6, (ground - titleBottom - (anySay ? fsB * 2.6 : PAD)) / 1.12);
     const LIGHT = { night: 'night', sunset: 'golden' }, INDOOR = /room|kitchen|bath|office|class|library|lab|cafe|restaurant|market|shop|hospital|bank|court|museum|gallery|cinema|news|podcast|server|factory|garage|gym|ship|airport|station|subway|bus|studio|stage/;
     const light = LIGHT[p.time] || (INDOOR.test(p.backdrop || '') ? 'interior' : 'day');
+    sticks = {};
     names.forEach(n => {
       const c3 = cast[n].model3d && (inp.char3d || {})[n];
       sticks[n] = c3 && c3.sets && c3.sets.length ? new VF.Char3D(figG, cast[n], S, c3, light) : new VF.Stick(figG, cast[n], S, colors);
+      sticks[n].g.style.filter = sticks[n] instanceof VF.Char3D ? C3D_FX : STICK_FX;
     });
     VF.lib = { actions: inp.actions || window.__actions || { stand: { frames: [{ pose: {} }] } } };
     tracks = VF.stick.timeline(inp.acting || [], names, W, VF.lib);
-    items = (p.items || []).map(it => {
+    const raw = (p.items || []).map(it => ({ ...it, t: VF.at(it.at, 0.3) }));
+    items = placeItems(raw, W, H, names, cast).map(it => {
       const g = el('g', { opacity: 0 }, itemsG);
-      const fs = (it.size || 0.1) * W;
-      el('text', { 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-size': fs, 'font-weight': 800, 'font-family': 'var(--title-font)', fill: 'var(--ink)', text: it.emoji || it.text || '' }, g);
-      return { g, x: (it.x ?? 0.5) * W, y: (it.y ?? 0.4) * H, t: VF.at(it.at, 0.3) };
+      const txt = it.emoji || it.text || '';
+      el('text', { 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-size': it._fs, 'font-weight': 800, 'font-family': 'var(--title-font)',
+        fill: it.emoji ? 'var(--ink)' : (dark ? '#fff' : 'var(--ink)'), stroke: it.emoji ? 'none' : (dark ? 'rgba(0,0,0,.75)' : '#fff'),
+        'stroke-width': it._fs * 0.12, 'paint-order': 'stroke', 'stroke-linejoin': 'round', text: txt }, g);
+      return { g, x: it._x, y: it._y, t: it.t };
     });
-    if (p.title) {
-      titleEl = el('div', { class: 'layer center title fs-l' }, root);
-      Object.assign(titleEl.style, { bottom: 'auto', height: (portrait ? H * 0.26 : H * 0.24) + 'px', padding: '0 6%', paddingTop: portrait ? H * 0.06 + 'px' : 0 });
-      titleEl.innerHTML = p.title.replace(/\*(.+?)\*/g, '<span class="hl">$1</span>');
-      titleEl._t = VF.at(p.title_at, 0);
-    } else titleEl = null;
   },
   draw(t, inp) {
     const W = inp.width;
@@ -76,6 +186,7 @@ VF.scene({
       const since = t - (s.sayT ?? 0);
       st.say(s.say || '', s.say ? VF.clamp(since / 0.15) * VF.clamp((2.6 - since) / 0.3) : 0);
     }
+    layoutBubbles(W);
     for (const it of items) {
       const k = VF.prog(t, it.t, 0.45, 'back');
       it.g.setAttribute('opacity', VF.clamp((t - it.t) / 0.2));

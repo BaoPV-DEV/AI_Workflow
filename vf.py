@@ -103,6 +103,8 @@ def cmd_check(a):
     words = sum(len((s.get("voice_text") or "").split()) for s in data["scenes"])
     print(f"{len(data['scenes'])} cảnh · {words} từ · ước lượng {words / 2.5:.0f}s")
     print("✔ Hợp lệ" if not errs else "✘ " + "\n✘ ".join(errs))
+    for w in manifest.lint(data):
+        print("⚠ " + w)
     return 1 if errs else 0
 
 

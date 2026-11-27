@@ -7,3 +7,4 @@ THỂ LOẠI: HOẠT HÌNH NGƯỜI QUE KỂ CHUYỆN
 - say (bong bóng) ≤4 từ, chỉ khi thật đắt. props.items để hiện đồ vật/biểu tượng (emoji) đúng lúc.
 - Xen 1 cảnh chữ/số sau mỗi 3-4 cảnh diễn để nhấn ý.
 - Style gợi ý: cozy_story, classic_light, classic_dark, historical (lịch sử), meme_dynamic (giải trí).
+- Màu & bố cục (engine tự né chồng chéo nhưng viết sạch từ đầu thì đẹp hơn): áo nhân vật tương phản với nền cảnh (nền xanh lá → áo đỏ/cam/vàng; nền tối/đêm → áo sáng; nền ấm/hoàng hôn → áo xanh lam/trắng), 2 nhân vật không trùng màu áo. Mỗi cảnh ≤2 items, đặt ở khoảng trống (x≈0.5 giữa 2 người, hoặc sát mép 0.12/0.88 khi 1 người ở giữa), không đặt trùng chỗ người đứng. props.title ≤6 từ; không vừa có title vừa có 2 bong bóng dài cùng lúc.
