@@ -113,6 +113,11 @@
       this.r = r;
       const headFill = c.skin || (c.head === 'filled' ? (c.head_fill || '#fff') : c.head === 'solid' ? c.ink : 'var(--bg)');
       el('circle', { r, fill: headFill, stroke: c.ink, 'stroke-width': w }, this.headG);
+      // màu mắt/miệng phải tương phản với màu ĐẦU (không phải màu nét): nét trắng + đầu trắng → mặt biến mất
+      const resolve = v => /^var\(/.test(v) ? getComputedStyle(document.documentElement).getPropertyValue(v.slice(4, -1)).trim() : v;
+      const lumOf = v => { const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(resolve(v) || ''); return m ? (0.299 * parseInt(m[1], 16) + 0.587 * parseInt(m[2], 16) + 0.114 * parseInt(m[3], 16)) / 255 : 0.5; };
+      const lh = lumOf(headFill), li = lumOf(c.ink);
+      this.faceInk = Math.abs(lh - li) > 0.45 ? c.ink : (lh > 0.5 ? '#1f1f24' : '#ffffff');
       this.faceG = el('g', {}, this.headG);
       this.hatG = el('g', {}, this.headG);
       this.drawHair(r, w);
@@ -162,7 +167,7 @@
       if (key === this._face) return;
       this._face = key;
       const g = this.faceG; g.innerHTML = '';
-      const s = this.r / 26, ink = this.c.ink;
+      const s = this.r / 26, ink = this.faceInk || this.c.ink;
       const fg = el('g', { transform: `translate(${this.r * 0.3} 0) scale(${s})` }, g);
       const eye = x => {
         if (mood === 'love') return el('path', { d: `M${x} -1 l-4 -4 a2.5 2.5 0 0 1 4 -3 a2.5 2.5 0 0 1 4 3 Z`, fill: '#e91e63' }, fg);
@@ -180,6 +185,7 @@
       const A = this._accHead || {};
       if (A.mustache) el('path', { d: 'M-9 5 Q-4 2 0 5 Q4 2 9 5 Q4 8 0 6 Q-4 8 -9 5 Z', fill: ink }, fg);
       if (A.beard) el('path', { d: 'M-14 4 Q-12 20 0 22 Q12 20 14 4 Q8 12 0 12 Q-8 12 -14 4 Z', fill: this.c.hair_color || ink, opacity: .9 }, fg);
+      if (!A.mustache) el('path', { d: 'M2 -1 Q5 3 1 4', stroke: ink, 'stroke-width': 2.2, fill: 'none', 'stroke-linecap': 'round', opacity: 0.75 }, fg);  // mũi (góc 3/4)
       if (open && mood !== 'surprised') el('ellipse', { cx: 0, cy: 10, rx: 4 + open * 1.5, ry: 2 + open * 2.4, fill: ink }, fg);
       else if (mood === 'surprised') el('ellipse', { cx: 0, cy: 11, rx: 5, ry: 6, fill: ink }, fg);
       else if (!A.mustache || mood !== 'neutral') el('path', { d: MOUTH[mood] || MOUTH.neutral, stroke: ink, 'stroke-width': 3, fill: mood === 'laugh' ? ink : 'none', 'stroke-linecap': 'round' }, fg);
