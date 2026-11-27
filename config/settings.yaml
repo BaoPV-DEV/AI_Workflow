@@ -47,6 +47,7 @@ agent:
     translate: haiku    # dịch lồng tiếng
     subtitles: haiku    # phụ đề thêm, dịch .srt
     publish: haiku      # tiêu đề, mô tả, tag
+    audit: sonnet       # kiểm duyệt chính sách YouTube/TikTok
   # Tên model API ứng với từng mức (đổi khi Anthropic ra bản mới). Claude Code dùng thẳng opus/sonnet/haiku.
   models_by_tier:
     opus: claude-opus-5-5

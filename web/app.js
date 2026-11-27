@@ -370,6 +370,8 @@ function renderDetail(e) {
         <div class="runbar" style="margin-top:12px"><button class="btn2 pri" id="rsubgo">Tạo phụ đề</button><span class="st" id="rsubst"></span></div>
         <p class="small muted">Cần video đã có giọng đọc. Mỗi ngôn ngữ 1 lần gọi model nhỏ. Muốn lồng tiếng: Trình sửa cảnh → Cài đặt video → Tạo bản dịch.</p></div>
       <div class="card"><div class="cap">Gói đăng</div><div class="row"><select id="rplat">${Object.keys(META.platforms || {}).map(p => `<option>${p}</option>`).join('')}</select><button class="btn2 pri" style="flex:none" id="rpubgo">Viết gói đăng</button></div><div class="st small muted" id="rpubst" style="margin-top:8px"></div><div id="rpub"></div></div>
+      <div class="card"><div class="cap">🛡 Kiểm duyệt chính sách</div><p class="small muted" style="margin:0 0 10px">Rà lời đọc, chữ trên màn hình và tiêu đề theo chính sách YouTube/TikTok (kiếm tiền, nhãn AI, bản quyền, thân thiện quảng cáo). Có câu viết lại an toàn để áp một chạm.</p>
+        <div class="row"><button class="btn2 pri" id="rauditgo">🛡 Kiểm duyệt</button><span class="st small muted" id="rauditst"></span></div><div id="raudit" style="margin-top:10px"></div></div>
       ${full || draft ? `<div class="card"><div class="cap">🎨 Thumbnail thu hút</div><p class="small muted" style="margin:0 0 10px">Tự ghép khung hình trong video với chữ to + dải màu theo đúng tông của video — thay cho 1 khung hình trần.</p>
         <input id="rthumbtext" placeholder="Chữ nổi bật (để trống thì dùng chữ ở ô 'Chữ trên thumbnail' hoặc tiêu đề video)" style="width:100%;margin-bottom:8px">
         <div class="row"><button class="btn2 pri" id="rthumbpro">🎨 Tạo thumbnail</button><span class="st small muted" id="rthumbprost"></span></div>
@@ -404,6 +406,30 @@ function renderDetail(e) {
       $('#rthumbprev').innerHTML = `<img src="${j.result.thumb}" style="max-width:260px;border-radius:10px;box-shadow:0 10px 30px #0003">`;
       toast('Đã tạo thumbnail mới');
     });
+  };
+  const LV = { CHAN: ['err', 'Chặn'], RUI_RO: ['warn', 'Rủi ro'], LUU_Y: ['', 'Lưu ý'] };
+  const showAudit = a => {
+    const iss = a.issues || [], applied = new Set(a.applied || []);
+    const can = i => iss[i].rewrite && (iss[i].field || 'voice_text') !== 'props' && !applied.has(i);
+    const todo = iss.map((_, i) => i).filter(can);
+    $('#raudit').innerHTML = `<div class="small" style="display:grid;gap:4px;margin-bottom:10px">
+        <div>🏷 Nhãn AI: <b>${esc(a.ai_disclosure || '—')}</b></div><div>♻️ Nội dung lặp/không nguyên bản: <b>${esc(a.inauthentic_risk || '—')}</b></div>
+        <div>💰 Quảng cáo: <b>${esc(a.ad_friendly || '—')}</b></div><div>📌 <b>${esc(a.status || '')}</b></div></div>
+      ${iss.length ? iss.map((it, i) => `<div class="aud"><div><span class="badge ${LV[it.level]?.[0] || ''}">${LV[it.level]?.[1] || esc(it.level)}</span> <b>${it.scene_id ? 'Cảnh ' + it.scene_id : 'Tiêu đề'}</b> · ${esc(it.item)} — ${esc(it.problem)}</div>
+          ${it.rewrite ? `<div class="small" style="margin-top:4px">→ <i>${esc(it.rewrite)}</i></div>` : ''}
+          ${applied.has(i) ? '<div class="small ok" style="margin-top:4px">✓ đã áp dụng</div>' : can(i) ? `<button class="btn2" data-aud="${i}" style="margin-top:6px">Áp dụng</button>` : it.rewrite ? '<div class="small muted" style="margin-top:4px">Chữ trên màn hình: sửa trong Trình sửa cảnh</div>' : ''}</div>`).join('')
+        : '<p class="small ok">✓ Không thấy vấn đề.</p>'}
+      ${todo.length > 1 ? `<button class="btn2 pri" id="raudall" style="margin-top:8px">Áp dụng tất cả (${todo.length})</button>` : ''}`;
+    const apply = async idx => { const r = await api(`/api/p/${e.id}/audit/apply`, { method: 'POST', body: { idx } });
+      showAudit(r.audit); if (r.applied.length) toast(`Đã sửa ${r.applied.length} chỗ — bấm "Giọng đọc" để tạo lại giọng cho cảnh đã đổi lời`); };
+    $('#raudit').querySelectorAll('[data-aud]').forEach(b => b.onclick = () => apply([+b.dataset.aud]));
+    if ($('#raudall')) $('#raudall').onclick = () => apply(todo);
+  };
+  if (e.audit) fetch(`/files/${e.id}/out/audit.json?${Date.now()}`).then(r => r.json()).then(showAudit).catch(() => {});
+  $('#rauditgo').onclick = async () => {
+    if (META.brain.backend === 'manual') return go('settings');
+    const r = await api(`/api/p/${e.id}/audit`, { method: 'POST', body: {} });
+    watch(r.job, $('#rauditst'), 'Claude đang rà chính sách', j => { if (j.code === 0) showAudit(j.result); });
   };
   $('#rplat').onchange = loadPub;
   $('#rpubgo').onclick = async () => {
@@ -468,7 +494,7 @@ async function pgSettings() {
         <div class="tintbox"><b>Claude Code</b> <span class="small muted">(gói Pro/Max)</span><p class="small muted" style="margin:4px 0 6px">Cài trong PowerShell rồi gõ <code>claude</code> một lần để đăng nhập:</p><code style="display:block;background:#fff;padding:6px 9px;border-radius:7px;font-size:12.5px">irm https://claude.ai/install.ps1 | iex</code></div></div>
       <div class="card"><div class="cap">🤖 Model AI cho từng việc</div>
         <p class="small muted" style="margin:0 0 8px">Việc cần sáng tạo dùng model mạnh, việc lặp lại dùng model nhẹ để tiết kiệm lượt dùng của gói Claude (hoặc tiền API).</p>
-        ${[['plan', '✍️ Viết kịch bản'], ['ideas', '🔥 Tìm & chấm chủ đề (tra web)'], ['edit', '🎛 Sửa cảnh bằng lời'], ['translate', '🌐 Dịch lồng tiếng'], ['subtitles', '💬 Phụ đề thêm, dịch .srt'], ['publish', '🚀 Gói đăng (tiêu đề, mô tả, tag)']]
+        ${[['plan', '✍️ Viết kịch bản'], ['ideas', '🔥 Tìm & chấm chủ đề (tra web)'], ['edit', '🎛 Sửa cảnh bằng lời'], ['translate', '🌐 Dịch lồng tiếng'], ['subtitles', '💬 Phụ đề thêm, dịch .srt'], ['publish', '🚀 Gói đăng (tiêu đề, mô tả, tag)'], ['audit', '🛡 Kiểm duyệt chính sách']]
           .map(([k, n]) => `<div class="row" style="margin-top:6px"><span style="flex:1.3">${n}</span>${sel('agent.tiers.' + k, [['opus', 'Opus · mạnh nhất'], ['sonnet', 'Sonnet · cân bằng'], ['haiku', 'Haiku · nhanh, nhẹ']])}</div>`).join('')}
         <div class="row" style="margin-top:6px"><span style="flex:1.3">🎨 Ảnh AI (GPU, không dùng Claude)</span>${sel('visual.default_workflow', (s.workflows || ['sdxl_image']).map(w => [w, w]))}</div></div>
       <div class="card"><div class="cap">🎙 Giọng đọc &amp; phụ đề</div>

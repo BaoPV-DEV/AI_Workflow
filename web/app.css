@@ -112,8 +112,9 @@ body { font: 14px/1.5 var(--font); color: var(--ink); background: var(--page); d
 .ep .t { font-weight: 700; line-height: 1.35; cursor: pointer; } .ep .t:hover { color: var(--violet); }
 .ep .id { font-size: 12px; color: var(--mute); margin: 4px 0 8px; word-break: break-all; }
 .ep .bs { display: flex; flex-wrap: wrap; gap: 5px; }
-.ep .ac { display: flex; gap: 6px; padding: 10px 13px; border-top: 1px solid var(--card-line); align-items: center; }
-.ep .ac select { width: auto; font-size: 12px; padding: 3px 6px; margin-left: auto; }
+.ep .ac { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 13px; border-top: 1px solid var(--card-line); align-items: center; }
+.ep .ac select { flex: 1 1 90px; min-width: 0; width: auto; font-size: 12px; padding: 3px 6px; }
+.ep .ac .xbtn { flex: none; }
 
 /* ---------- chủ đề thịnh hành ---------- */
 .plan .row2 { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid var(--card-line); border-radius: 10px; margin-bottom: 6px; }
@@ -162,3 +163,6 @@ body { font: 14px/1.5 var(--font); color: var(--ink); background: var(--page); d
 .ph h1, .ep .t, .tc h4, .rlist .r .sp, .plan .row2 .t, .files .fr span { overflow-wrap: anywhere; min-width: 0; }
 .card, .tc, .ep, .way2, .gtile { min-width: 0; }
 .grid2 > * { min-width: 0; }
+
+.aud { padding: 9px 11px; border: 1px solid var(--card-line); border-radius: 10px; margin-bottom: 7px; }
+.small.ok, .aud .ok { color: #15803d; }

@@ -76,6 +76,7 @@ def episode(d: Path, data: dict) -> dict:
             "rendered": any("_draft" not in v.name for v in vids), "draft": any("_draft" in v.name for v in vids),
             "videos": [v.name for v in vids], "subs": [data.get("lang", "vi")] + subs,
             "publish": {p.stem.removeprefix("publish_"): p.name for p in out.glob("publish_*.json")} if out.exists() else {},
+            "audit": (out / "audit.json").exists(),
             "ai": data.get("source") != "narration", "source": data.get("source", "ai"),
             "thumb": f"/files/{d.name}/{thumb.relative_to(d).as_posix()}?{int(thumb.stat().st_mtime)}" if thumb else "",
             "mtime": int((d / manifest.MANIFEST).stat().st_mtime)}
@@ -303,11 +304,9 @@ def publish_pack(pid: str, platform: str = "YouTube") -> dict:
             chapters.append(f"{int(t // 60)}:{int(t % 60):02d} {(s.get('props') or {}).get('heading', '').replace('*', '')}")
         t += s.get("duration", 0)
     script = "\n".join(s.get("voice_text", "") for s in data["scenes"])
-    res = complete_json("publish", [
-        "Viết gói đăng video tối ưu tìm kiếm nhưng trung thực (không giật tít sai sự thật). Ngôn ngữ = ngôn ngữ kịch bản. "
-        "title ≤ 70 ký tự, 3 alt_titles, description 2 đoạn + câu hỏi gợi bình luận, 15 tags, 3-5 hashtags, "
-        "thumbnail_text ≤ 4 từ, pinned_comment."],
-        f"Nền tảng: {platform}\nTiêu đề tạm: {data.get('title', '')}\nChương có sẵn: {chapters}\n\nKỊCH BẢN:\n{script[:6000]}",
+    res = complete_json("publish", [_prompt("publish")],
+        f"Nền tảng: {platform}\nKhung hình: {data.get('aspect_ratio', '9:16')}\nThời lượng: {round(t)} giây\n"
+        f"Tiêu đề tạm: {data.get('title', '')}\nChương có sẵn: {chapters}\n\nKỊCH BẢN:\n{script[:6000]}",
         PUBLISH_SCHEMA, "submit")
     if chapters and not res.get("chapters"):
         res["chapters"] = chapters
@@ -315,6 +314,71 @@ def publish_pack(pid: str, platform: str = "YouTube") -> dict:
     out.mkdir(exist_ok=True)
     (out / f"publish_{platform.replace(' ', '_').lower()}.json").write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
     return res
+
+
+def _prompt(name: str) -> str:
+    return (config.CONFIG / "prompts" / f"{name}.md").read_text(encoding="utf-8")
+
+
+# ---------------------------------------------------------------- kiểm duyệt chính sách (từ repo Skills)
+AUDIT_SCHEMA = {"type": "object", "required": ["issues", "ai_disclosure", "status"], "properties": {
+    "issues": {"type": "array", "items": {"type": "object", "required": ["scene_id", "item", "level", "problem"], "properties": {
+        "scene_id": {"type": "integer", "description": "0 = tiêu đề video"}, "item": {"type": "string", "description": "mã mục, vd D3, C4"},
+        "level": {"type": "string", "enum": ["CHAN", "RUI_RO", "LUU_Y"]}, "problem": {"type": "string", "description": "đoạn vi phạm ≤15 từ + lý do"},
+        "field": {"type": "string", "enum": ["voice_text", "props", "title"]}, "rewrite": {"type": "string"}}}},
+    "ai_disclosure": {"type": "string", "description": "Bật / Không cần + lý do"},
+    "inauthentic_risk": {"type": "string", "description": "Thấp / TB / Cao + lý do"},
+    "ad_friendly": {"type": "string", "description": "Xanh dự kiến / Có thể vàng + điểm còn lại"},
+    "status": {"type": "string", "description": "SẴN SÀNG hoặc CẦN NGƯỜI DÙNG QUYẾT ĐỊNH: …"}}}
+
+
+def policy_audit(pid: str) -> dict:
+    """Rà kịch bản theo checklist chính sách YouTube/TikTok, đề xuất câu viết lại. Lưu out/audit.json."""
+    from .agent.llm import complete_json
+
+    d, data = manifest.load(pid)
+    lines = [f"0|title|{data.get('title', '')}"]
+    for s in data["scenes"]:
+        props = {k: v for k, v in (s.get("props") or {}).items() if isinstance(v, str) and len(v) < 200}
+        lines.append(f"{s['scene_id']}|{s.get('template_name') or s.get('visual_type')}|{s.get('voice_text', '')}"
+                     + (f"|chữ: {json.dumps(props, ensure_ascii=False)}" if props else "")
+                     + (f"|prompt ảnh: {s['prompt']}" if s.get("prompt") else ""))
+    res = complete_json("audit", [_prompt("policy")],
+                        f"Ngôn ngữ: {data.get('lang', 'vi')} · Khung {data.get('aspect_ratio', '9:16')} · hình: hoạt hình người que/đồ hoạ vẽ bằng code"
+                        f" · giọng: TTS tổng hợp (không mô phỏng người thật)\nCẢNH (id|kiểu|lời đọc|…):\n" + "\n".join(lines)[:12000],
+                        AUDIT_SCHEMA, "submit")
+    res["applied"] = []
+    out = d / "out"
+    out.mkdir(exist_ok=True)
+    (out / "audit.json").write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
+    return res
+
+
+def audit_apply(pid: str, idx: list[int] | None = None) -> dict:
+    """Áp các câu viết lại (field voice_text/title) của audit.json vào manifest. Cảnh đổi lời sẽ cần tạo lại giọng."""
+    d, data = manifest.load(pid)
+    f = d / "out" / "audit.json"
+    res = json.loads(f.read_text(encoding="utf-8"))
+    by_id = {s["scene_id"]: s for s in data["scenes"]}
+    done = []
+    for i, it in enumerate(res.get("issues", [])):
+        if (idx is not None and i not in idx) or i in res.get("applied", []) or not it.get("rewrite"):
+            continue
+        if it.get("field") == "title" or it.get("scene_id") == 0:
+            data["title"] = it["rewrite"]
+        elif it.get("field", "voice_text") == "voice_text" and it.get("scene_id") in by_id:
+            sc = by_id[it["scene_id"]]
+            sc["voice_text"] = it["rewrite"]
+            for k in ("audio_path", "duration", "word_timings"):  # lời mới → giọng và mốc từ phải tạo lại
+                sc.pop(k, None)
+        else:
+            continue  # chữ trên màn hình: để người dùng tự sửa trong Trình sửa cảnh
+        done.append(i)
+    if done:
+        manifest.save(d, data)
+        res["applied"] = sorted(set(res.get("applied", [])) | set(done))
+        f.write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
+    return {"applied": done, "audit": res}
 
 
 # ---------------------------------------------------------------- công cụ nhanh (video có sẵn)
@@ -393,7 +457,7 @@ EDITABLE = {"tts.engine", "tts.rate", "render.workers", "render.encoder", "rende
             "render.caption_words", "render.music", "default_style", "default_aspect", "default_lang", "fps",
             "agent.backend", "visual.comfyui_url", "visual.browser_channel", "visual.default_workflow", "trends.youtube_api_key",
             "agent.tiers.plan", "agent.tiers.ideas", "agent.tiers.edit", "agent.tiers.translate", "agent.tiers.subtitles",
-            "agent.tiers.publish", "studio.auto_exit"}
+            "agent.tiers.publish", "agent.tiers.audit", "studio.auto_exit"}
 
 
 def settings_get() -> dict:

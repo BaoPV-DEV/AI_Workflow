@@ -268,6 +268,43 @@ def cmd_schedule(a):
     print(r.stdout or r.stderr)
 
 
+def cmd_audit(a):
+    from engine import studio_api
+    r = studio_api.policy_audit(a.project)
+    names = {"CHAN": "CHẶN", "RUI_RO": "RỦI RO", "LUU_Y": "LƯU Ý"}
+    for i, it in enumerate(r["issues"]):
+        print(f"[{i}] {names.get(it['level'], it['level'])} · cảnh {it['scene_id']} · {it['item']} — {it['problem']}")
+        if it.get("rewrite"):
+            print(f"     → {it['rewrite']}")
+    print(f"Nhãn AI: {r.get('ai_disclosure')}\nNội dung lặp: {r.get('inauthentic_risk')}\nQuảng cáo: {r.get('ad_friendly')}\n{r.get('status')}")
+    if a.apply and r["issues"]:
+        done = studio_api.audit_apply(a.project)["applied"]
+        print(f"✔ Đã áp {len(done)} câu viết lại. Tạo lại giọng: vf voice {a.project}")
+
+
+def cmd_skills_sync(a):
+    """Kéo bản mới của repo Skills (BaoPV-DEV/Skills) và cập nhật tài liệu tham chiếu của skill video-strategy."""
+    import shutil
+    import subprocess
+    from engine import config
+    url = a.repo or (config.settings().get("skills") or {}).get("repo", "https://github.com/BaoPV-DEV/Skills.git")
+    cache = config.ROOT / ".cache" / "skills_repo"
+    if (cache / ".git").exists():
+        subprocess.run(["git", "-C", str(cache), "pull", "-q", "--ff-only"], check=True)
+    else:
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["git", "clone", "-q", "--depth", "1", url, str(cache)], check=True)
+    src = cache / ".claude" / "skills" / "ai-video-production-pipeline" / "references"
+    dst = config.ROOT / ".claude" / "skills" / "video-strategy" / "references"
+    for n in ("channel-analysis-framework.md", "seo-and-retention-rules.md", "policy-checklist.md"):
+        shutil.copy2(src / n, dst / n)
+    rev = subprocess.run(["git", "-C", str(cache), "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
+    f = dst / "SOURCE.md"
+    import re
+    f.write_text(re.sub(r"\(commit \w+\)", f"(commit {rev})", f.read_text(encoding="utf-8")), encoding="utf-8")
+    print(f"✔ Đã cập nhật tài liệu từ Skills @ {rev}. Bản rút gọn cho AI (config/prompts/policy.md, publish.md) sửa tay nếu quy tắc đổi nhiều.")
+
+
 def cmd_studio(a):
     from web.server import serve
     serve(a.port, open_browser=not a.no_open)
@@ -328,6 +365,8 @@ def main(argv=None):
     add("mcp-install", cmd_mcp_install, "đăng ký vào Claude Desktop (dùng tài khoản Claude, không cần API)")
     add("brain", cmd_brain, "xem AI đang dùng: API / Claude Code / thủ công")
     s = add("schedule", cmd_schedule, "chạy vf auto mỗi ngày"); s.add_argument("--time", default="07:13"); s.add_argument("args", nargs="?", default="--count 2")
+    s = add("audit", cmd_audit, "kiểm duyệt chính sách YouTube/TikTok (+ --apply để tự sửa lời)"); s.add_argument("project"); s.add_argument("--apply", action="store_true")
+    s = add("skills-sync", cmd_skills_sync, "cập nhật tài liệu từ repo Skills"); s.add_argument("--repo")
     s = add("studio", cmd_studio, "mở Web Studio"); s.add_argument("--port", type=int, default=8765); s.add_argument("--no-open", action="store_true")
     a = p.parse_args(argv)
     try:

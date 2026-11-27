@@ -371,6 +371,10 @@ class H(SimpleHTTPRequestHandler):
                 return self._json({"project_id": d.name, "scenes": len(data["scenes"]), "errors": manifest.validate(data)})
             if u.startswith("/api/p/") and u.endswith("/publish"):
                 return self._json({"job": run_fn(studio_api.publish_pack, u.split("/")[3], b.get("platform", "YouTube"))})
+            if u.startswith("/api/p/") and u.endswith("/audit"):
+                return self._json({"job": run_fn(studio_api.policy_audit, u.split("/")[3])})
+            if u.startswith("/api/p/") and u.endswith("/audit/apply"):
+                return self._json(studio_api.audit_apply(u.split("/")[3], b.get("idx")))
             if u.startswith("/api/p/") and u.endswith("/thumb_pro"):
                 return self._json({"job": run_fn(studio_api.thumbnail_pro, u.split("/")[3], b.get("text"), b.get("badge"), b.get("at"))})
             if u.startswith("/api/p/") and u.endswith("/subs"):

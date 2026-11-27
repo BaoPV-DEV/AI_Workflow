@@ -121,7 +121,7 @@ class LLM:
 import shutil
 import subprocess
 
-DEFAULT_TIER = {"plan": "opus", "ideas": "sonnet", "edit": "haiku", "translate": "haiku", "subtitles": "haiku", "publish": "haiku"}
+DEFAULT_TIER = {"plan": "opus", "ideas": "sonnet", "edit": "haiku", "translate": "haiku", "subtitles": "haiku", "publish": "haiku", "audit": "sonnet"}
 
 
 def tier(role: str) -> str:
