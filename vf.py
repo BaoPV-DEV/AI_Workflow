@@ -319,7 +319,7 @@ def cmd_char3d(a):
     elif a.action == "status":
         st = char3d.status()
         print(f"Blender: {st['python'] or '✘ chưa cài (vf char3d setup)'}\nDữ liệu cơ thể: {st['mpfb'] or '✘ chưa tải'}\n"
-              f"Card NVIDIA: {st['gpu'] or 'không → render CPU, ~12 giây/khung ở chất lượng chuẩn'}")
+              f"Card NVIDIA: {st['gpu'] or 'không có'} → Blender dùng {'card đồ hoạ' if st['device'] != 'cpu' else 'CPU'}, ~{st['sec_per_frame']:.0f} giây/khung (chất lượng chuẩn)")
     elif a.action == "list":
         for c in char3d.characters():
             print(f"{c['id']:14s} {c['name']:16s} {'động tác: ' + ', '.join(c['sets']) if c['sets'] else '(chưa render)'}")

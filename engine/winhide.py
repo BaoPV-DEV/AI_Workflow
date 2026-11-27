@@ -30,6 +30,8 @@ def setup() -> None:
         LOG.parent.mkdir(parents=True, exist_ok=True)
         if LOG.exists() and LOG.stat().st_size > 2_000_000:
             LOG.unlink()
+        if not LOG.exists():
+            LOG.write_bytes(b"\xef\xbb\xbf")  # dấu UTF-8 để PowerShell/Notepad hiện đúng tiếng Việt
         f = open(LOG, "a", encoding="utf-8", buffering=1)
         sys.stdout = sys.stderr = f
     orig = subprocess.Popen.__init__

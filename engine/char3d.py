@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -24,7 +25,7 @@ SPECS = config.ROOT / "library" / "cast3d"
 WIN = sys.platform == "win32"
 VENV = config.ROOT / ".venv3d"
 MPFB_REPO = "https://github.com/makehumancommunity/mpfb2"
-PY_WIN = "3.13.9"  # bản Python tải về khi máy chưa có 3.11/3.13
+PY_WIN = "3.13.13"  # bản Python tải về khi máy chưa có 3.11/3.13
 
 # Bộ động tác render sẵn. Góc 3/4 cho cử chỉ (lật ngang khi quay mặt bên kia), góc nghiêng cho đi/chạy.
 PROFILES = {
@@ -83,11 +84,28 @@ def gpu() -> str:
     return ""
 
 
+FAST_GPU = re.compile(r"RTX|GTX 1[6-9]\d\d|GTX [2-9]\d\d\d|\bA\d{2,4}\b|Tesla|TITAN", re.I)
+
+
+def fast_gpu(name: str | None = None) -> bool:
+    """Card đủ mạnh để Blender render nhanh hơn CPU rõ rệt. MX/GT/GTX đời cũ: ngang CPU, driver cũ dễ lỗi → dùng CPU."""
+    name = gpu() if name is None else name
+    return bool(name and FAST_GPU.search(name))
+
+
+def device() -> str:
+    return (_cfg().get("device") or ("auto" if fast_gpu() else "cpu"))
+
+
+def sec_per_frame() -> float:
+    """Ước lượng ở chất lượng "chuẩn" (theo bảng đo của repo Skills: RTX 1-3s, CPU laptop/MX250 10-15s)."""
+    return 2.0 if fast_gpu() else 12.0
+
+
 def status() -> dict:
     py, data, g = blender_python(), mpfb_data(), gpu()
-    return {"ready": bool(py and data), "python": py, "mpfb": data, "gpu": g,
-            "sec_per_frame": 2 if g else 12,  # ước lượng ở chất lượng "chuẩn" (theo bảng đo của repo Skills)
-            "characters": characters()}
+    return {"ready": bool(py and data), "python": py, "mpfb": data, "gpu": g, "fast_gpu": fast_gpu(g), "device": device(),
+            "sec_per_frame": sec_per_frame(), "characters": characters()}
 
 
 # ---------------------------------------------------------------- cài đặt (1 lần)
@@ -152,7 +170,8 @@ def setup() -> dict:
         subprocess.run(["git", "clone", "-q", "--depth", "1", "--filter=blob:none", "--sparse", MPFB_REPO, str(dst)], check=True)
         subprocess.run(["git", "-C", str(dst), "sparse-checkout", "set", "src/mpfb/data"], check=True)
     st = status()
-    _say(f"✔ Sẵn sàng. Card đồ hoạ: {st['gpu'] or 'không có NVIDIA → render bằng CPU (chậm hơn)'}")
+    _say(f"✔ Sẵn sàng. Card: {st['gpu'] or 'không có NVIDIA'} → Blender render bằng {'card đồ hoạ' if st['device'] != 'cpu' else 'CPU'}"
+         f" (~{st['sec_per_frame']:.0f} giây/khung ở chất lượng chuẩn)")
     return st
 
 
@@ -199,7 +218,8 @@ def _run_builder(spec: dict, args: list[str]) -> None:
     tmp = out_dir() / f"_{spec['id']}.spec.json"
     tmp.parent.mkdir(parents=True, exist_ok=True)
     tmp.write_text(json.dumps(spec, ensure_ascii=False), encoding="utf-8")
-    cmd = [py, str(KIT / "build_character.py"), "--char", str(tmp), "--data", data, "--out", str(out_dir()), *args]
+    cmd = [py, str(KIT / "build_character.py"), "--char", str(tmp), "--data", data, "--out", str(out_dir()),
+           "--device", device(), *args]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
     for line in p.stdout:  # chỉ in dòng có ích (tiến độ từng khung), bỏ log nội bộ của Blender
         if line.lstrip().startswith(("sheet ", spec["id"] + "/", spec["id"] + ":", "done", "Traceback", "Error", "ERROR")) or "Error" in line:
@@ -231,7 +251,7 @@ def plan(cid: str, profile: str = "co_ban", light: str = "day", only: str = "") 
 
 def estimate(jobs: list, quality: str = "chuan") -> dict:
     n = sum(FRAMES.get(j[0], 16) for j in jobs)
-    per = (2 if gpu() else 12) * {"nhap": 0.25, "chuan": 0.6, "cao": 1.0}[quality]
+    per = sec_per_frame() * {"nhap": 0.4, "chuan": 1.0, "cao": 1.6}[quality]
     return {"frames": n, "minutes": round(n * per / 60, 1)}
 
 

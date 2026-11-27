@@ -99,7 +99,7 @@ async function pgChar3d() {
     <div class="ph"><h1 style="white-space:nowrap">🧍 Nhân vật 3D</h1><p>Nhân vật người thật dựng bằng Blender (bộ hero3d của repo Skills). Mỗi nhân vật render <b>1 lần</b>, mọi video sau dùng lại.
       Dùng trong video: Trình sửa cảnh → Cài đặt video → Nhân vật → chọn mục <b>🧍 Nhân vật 3D</b> (chỉ áp cho cảnh "Người que diễn").</p></div>
     <div class="card"><div class="cap">Cài đặt</div>
-      ${st.ready ? `<p class="small">✔ Blender sẵn sàng · ${st.gpu ? `Card <b>${esc(st.gpu)}</b>: render nhanh` : 'Không thấy card NVIDIA: render bằng CPU (chậm, nên để chạy lúc rảnh)'}</p>`
+      ${st.ready ? `<p class="small">✔ Blender sẵn sàng · ${st.fast_gpu ? `Card <b>${esc(st.gpu)}</b>: render nhanh` : `${st.gpu ? `Card ${esc(st.gpu)} yếu, ngang CPU` : 'Không có card NVIDIA'}: render bằng CPU (chậm, nên để chạy lúc rảnh)`}</p>`
         : `<p class="small">Cần cài Blender một lần (~500 MB: Python 3.13 riêng + bpy + dữ liệu cơ thể MPFB2). Máy cần có <b>git</b>.</p>
            <div class="row"><button class="btn2 pri" id="c3setup">⬇ Cài Blender cho nhân vật 3D</button><span class="st small muted" id="c3setupst"></span></div>`}
       <p class="small muted" style="margin-top:8px">Thời gian ước tính cho 1 nhân vật trên máy này: 6 động tác chuẩn ${mins(est('co_ban', 'chuan').minutes)}, nháp ${mins(est('co_ban', 'nhap').minutes)} · 12 động tác chuẩn ${mins(est('day_du', 'chuan').minutes)}.</p></div>
