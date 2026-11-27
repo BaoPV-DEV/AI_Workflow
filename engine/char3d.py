@@ -130,14 +130,45 @@ def patch_kit() -> None:
     f.write_text(s, encoding="utf-8")
 
 
+DEVICES = {"auto": "Tự động (card mạnh → card, còn lại → CPU)", "gpu": "Card rời NVIDIA (CPU rảnh hơn)", "cpu": "CPU"}
+
+
+def device_choice() -> str:
+    v = _cfg().get("device", "auto")
+    return v if v in DEVICES else "auto"
+
+
 def device() -> str:
-    return (_cfg().get("device") or ("auto" if fast_gpu() else "cpu"))
+    """Giá trị --device cho Blender: gpu | cpu."""
+    c = device_choice()
+    if c == "auto":
+        return "gpu" if fast_gpu() else "cpu"
+    return c
+
+
+def gpu_check() -> dict:
+    """Hỏi chính Blender xem card nào dùng được cho Cycles (CUDA/OptiX)."""
+    py = blender_python()
+    if not py:
+        return {"ok": False, "devices": [], "msg": "Chưa cài Blender"}
+    code = ("import bpy\np=bpy.context.preferences.addons['cycles'].preferences\nout=[]\n"
+            "for b in ('OPTIX','CUDA','HIP','ONEAPI'):\n"
+            "    try:\n        p.compute_device_type=b; p.get_devices()\n"
+            "        out += [b+': '+d.name for d in p.devices if d.type!='CPU']\n    except Exception: pass\n"
+            "print('DEVICES=' + '|'.join(dict.fromkeys(out)))")
+    r = subprocess.run([py, "-c", code], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
+    line = next((l for l in r.stdout.splitlines() if l.startswith("DEVICES=")), "DEVICES=")
+    devs = [d for d in line[8:].split("|") if d]
+    g = gpu()
+    msg = (f"Blender dùng được: {', '.join(devs)}" if devs else
+           f"Blender không thấy card rời{f' ({g})' if g else ''}. Thường do driver NVIDIA quá cũ: cập nhật driver mới (nhánh 58x) rồi kiểm tra lại.")
+    return {"ok": bool(devs), "devices": devs, "msg": msg}
 
 
 def sec_per_frame() -> float:
     """Ước lượng ở chất lượng "chuẩn" (theo bảng đo của repo Skills: RTX 1-3s, CPU laptop/MX250 10-15s)."""
-    if fast_gpu() and device() != "cpu":
-        return 2.0
+    if device() == "gpu":
+        return 2.0 if fast_gpu() else 12.0  # MX/GT: tốc độ ngang CPU, nhưng CPU được rảnh
     n = os.cpu_count() or 4
     return 12.0 * n / threads()  # ít luồng hơn thì lâu hơn tương ứng
 
@@ -146,6 +177,7 @@ def status() -> dict:
     py, data, g = blender_python(), mpfb_data(), gpu()
     return {"ready": bool(py and data), "python": py, "mpfb": data, "gpu": g, "fast_gpu": fast_gpu(g), "device": device(),
             "cpu": cpu_level(), "cpu_levels": CPU_LEVELS, "threads": threads(), "cores": os.cpu_count(),
+            "device_choice": device_choice(), "devices": DEVICES,
             "sec_per_frame": sec_per_frame(), "characters": characters()}
 
 
@@ -263,11 +295,20 @@ def _run_builder(spec: dict, args: list[str]) -> None:
            "--device", device(), *args]
     patch_kit()
     env = {**os.environ, "CHAR_THREADS": str(threads())}
-    print(f"⚙ Dùng {threads()}/{os.cpu_count()} luồng CPU, ưu tiên thấp (đổi ở trang Nhân vật 3D → Mức dùng CPU)", flush=True)
+    dev = device()
+    print(f"⚙ Thiết bị: {'card rời ' + (gpu() or '') if dev == 'gpu' else 'CPU'} · {threads()}/{os.cpu_count()} luồng CPU, ưu tiên thấp"
+          " (đổi ở trang Nhân vật 3D)", flush=True)
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace",
                          env=env, **_low_priority())
+    used_gpu = False
     for line in p.stdout:  # chỉ in dòng có ích (tiến độ từng khung), bỏ log nội bộ của Blender
-        if line.lstrip().startswith(("sheet ", spec["id"] + "/", spec["id"] + ":", "done", "Traceback", "Error", "ERROR")) or "Error" in line:
+        if line.startswith("Cycles GPU:"):
+            used_gpu = True
+            print("🟢 Đang render bằng card rời: " + line.split(":", 1)[1].strip(), flush=True)
+        elif line.lstrip().startswith(("sheet ", spec["id"] + "/", spec["id"] + ":", "done", "Traceback", "Error", "ERROR")) or "Error" in line:
+            if spec["id"] + ":" in line and dev == "gpu" and not used_gpu:
+                print("⚠ Blender không dùng được card rời (driver NVIDIA cũ?) → đang render bằng CPU."
+                      " Cập nhật driver rồi bấm 'Kiểm tra card rời' ở trang Nhân vật 3D.", flush=True)
             print(line.rstrip(), flush=True)
     if p.wait():
         raise RuntimeError(f"Blender lỗi (mã {p.returncode})")

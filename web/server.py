@@ -391,6 +391,9 @@ class H(SimpleHTTPRequestHandler):
                 return self._json({"project_id": d.name, "scenes": len(data["scenes"]), "errors": manifest.validate(data)})
             if u.startswith("/api/p/") and u.endswith("/publish"):
                 return self._json({"job": run_fn(studio_api.publish_pack, u.split("/")[3], b.get("platform", "YouTube"))})
+            if u == "/api/char3d/gpucheck":
+                from engine import char3d
+                return self._json({"job": run_fn(char3d.gpu_check)})
             if u == "/api/char3d/setup":
                 return self._json({"job": run_job(["char3d", "setup"])})
             if u == "/api/char3d/new":
