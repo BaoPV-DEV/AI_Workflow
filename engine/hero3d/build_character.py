@@ -1325,6 +1325,8 @@ def setup_render(res_h, aspect=0.75):
             except Exception:
                 continue
     scene.render.film_transparent = True
+    if os.environ.get("CHAR_THREADS"):  # AI Workflow: CHAR_THREADS
+        scene.render.threads_mode = "FIXED"; scene.render.threads = max(1, int(os.environ["CHAR_THREADS"]))
     scene.render.use_persistent_data = True
     scene.render.use_motion_blur = not A.fast and bool(RSPEC.get("motion_blur", True))
     scene.render.motion_blur_shutter = 0.45

@@ -93,18 +93,59 @@ def fast_gpu(name: str | None = None) -> bool:
     return bool(name and FAST_GPU.search(name))
 
 
+CPU_LEVELS = {"nhe": "Nhẹ – một nửa số nhân, máy vẫn mượt", "vua": "Vừa – chừa 2 nhân cho bạn (mặc định)", "toi_da": "Tối đa – nhanh nhất, máy chậm"}
+
+
+def cpu_level() -> str:
+    v = _cfg().get("cpu", "vua")
+    return v if v in CPU_LEVELS else "vua"
+
+
+def threads() -> int:
+    n = os.cpu_count() or 4
+    return {"nhe": max(1, n // 2), "vua": max(1, n - 2), "toi_da": n}[cpu_level()]
+
+
+def _low_priority() -> dict:
+    """Tiến trình render nhường CPU cho ứng dụng bạn đang dùng (máy không bị đơ dù CPU cao)."""
+    if WIN:
+        return {"creationflags": 0x40 if cpu_level() == "nhe" else 0x4000}  # IDLE / BELOW_NORMAL_PRIORITY_CLASS
+    return {"preexec_fn": lambda: os.nice(19 if cpu_level() == "nhe" else 10)}
+
+
+PATCH_MARK = "# AI Workflow: CHAR_THREADS"
+
+
+def patch_kit() -> None:
+    """Thêm giới hạn số luồng CPU vào build_character.py (giữ lại sau mỗi lần vf skills-sync)."""
+    f = KIT / "build_character.py"
+    s = f.read_text(encoding="utf-8")
+    if PATCH_MARK in s:
+        return
+    anchor = '    scene.render.film_transparent = True\n'
+    if anchor not in s:
+        return
+    s = s.replace(anchor, anchor + f'    if os.environ.get("CHAR_THREADS"):  {PATCH_MARK}\n'
+                  '        scene.render.threads_mode = "FIXED"; scene.render.threads = max(1, int(os.environ["CHAR_THREADS"]))\n', 1)
+    f.write_text(s, encoding="utf-8")
+
+
 def device() -> str:
     return (_cfg().get("device") or ("auto" if fast_gpu() else "cpu"))
 
 
 def sec_per_frame() -> float:
     """Ước lượng ở chất lượng "chuẩn" (theo bảng đo của repo Skills: RTX 1-3s, CPU laptop/MX250 10-15s)."""
-    return 2.0 if fast_gpu() else 12.0
+    if fast_gpu() and device() != "cpu":
+        return 2.0
+    n = os.cpu_count() or 4
+    return 12.0 * n / threads()  # ít luồng hơn thì lâu hơn tương ứng
 
 
 def status() -> dict:
     py, data, g = blender_python(), mpfb_data(), gpu()
     return {"ready": bool(py and data), "python": py, "mpfb": data, "gpu": g, "fast_gpu": fast_gpu(g), "device": device(),
+            "cpu": cpu_level(), "cpu_levels": CPU_LEVELS, "threads": threads(), "cores": os.cpu_count(),
             "sec_per_frame": sec_per_frame(), "characters": characters()}
 
 
@@ -220,7 +261,11 @@ def _run_builder(spec: dict, args: list[str]) -> None:
     tmp.write_text(json.dumps(spec, ensure_ascii=False), encoding="utf-8")
     cmd = [py, str(KIT / "build_character.py"), "--char", str(tmp), "--data", data, "--out", str(out_dir()),
            "--device", device(), *args]
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+    patch_kit()
+    env = {**os.environ, "CHAR_THREADS": str(threads())}
+    print(f"⚙ Dùng {threads()}/{os.cpu_count()} luồng CPU, ưu tiên thấp (đổi ở trang Nhân vật 3D → Mức dùng CPU)", flush=True)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace",
+                         env=env, **_low_priority())
     for line in p.stdout:  # chỉ in dòng có ích (tiến độ từng khung), bỏ log nội bộ của Blender
         if line.lstrip().startswith(("sheet ", spec["id"] + "/", spec["id"] + ":", "done", "Traceback", "Error", "ERROR")) or "Error" in line:
             print(line.rstrip(), flush=True)

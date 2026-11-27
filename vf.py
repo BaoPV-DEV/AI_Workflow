@@ -305,6 +305,8 @@ def cmd_skills_sync(a):
     # bộ dựng nhân vật 3D (make_character.py đã chỉnh đường dẫn cho AI Workflow nên giữ nguyên)
     shutil.copy2(cache / ".claude" / "skills" / "ai-video-production-pipeline" / "scripts" / "hero3d" / "build_character.py",
                  config.ROOT / "engine" / "hero3d" / "build_character.py")
+    from engine import char3d
+    char3d.patch_kit()
     rev = subprocess.run(["git", "-C", str(cache), "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
     f = dst / "SOURCE.md"
     import re

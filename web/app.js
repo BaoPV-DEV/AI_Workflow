@@ -102,6 +102,9 @@ async function pgChar3d() {
       ${st.ready ? `<p class="small">✔ Blender sẵn sàng · ${st.fast_gpu ? `Card <b>${esc(st.gpu)}</b>: render nhanh` : `${st.gpu ? `Card ${esc(st.gpu)} yếu, ngang CPU` : 'Không có card NVIDIA'}: render bằng CPU (chậm, nên để chạy lúc rảnh)`}</p>`
         : `<p class="small">Cần cài Blender một lần (~500 MB: Python 3.13 riêng + bpy + dữ liệu cơ thể MPFB2). Máy cần có <b>git</b>.</p>
            <div class="row"><button class="btn2 pri" id="c3setup">⬇ Cài Blender cho nhân vật 3D</button><span class="st small muted" id="c3setupst"></span></div>`}
+      <div class="row" style="margin-top:8px"><span class="small" style="flex:none">Mức dùng CPU khi render</span>
+        <select id="c3cpu">${Object.entries(st.cpu_levels).map(([k, n]) => `<option value="${k}" ${k === st.cpu ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
+        <span class="small muted" style="flex:none">${st.threads}/${st.cores} luồng · luôn ưu tiên thấp</span></div>
       <p class="small muted" style="margin-top:8px">Thời gian ước tính cho 1 nhân vật trên máy này: 6 động tác chuẩn ${mins(est('co_ban', 'chuan').minutes)}, nháp ${mins(est('co_ban', 'nhap').minutes)} · 12 động tác chuẩn ${mins(est('day_du', 'chuan').minutes)}.</p></div>
     <div class="card"><div class="cap">Tạo nhân vật mới</div>
       <div class="row"><input id="c3name" placeholder="Tên nhân vật, vd Minh"><select id="c3base">${st.characters.map(c => `<option value="${esc(c.id)}">dựa trên ${esc(c.name)}</option>`).join('')}</select><button class="btn2 pri" style="flex:none" id="c3new">+ Tạo</button></div>
@@ -112,6 +115,7 @@ async function pgChar3d() {
       <textarea id="c3json" rows="22" style="width:100%;font-family:monospace;font-size:12px"></textarea></div>
       <div class="dfoot"><button class="btn2 pri" id="c3save">Lưu</button></div></dialog></div>`);
   const P = page('char3d');
+  $('#c3cpu').onchange = async e => { await api('/api/settings', { method: 'POST', body: { values: { 'char3d.cpu': e.target.value } } }); toast('Đã đổi mức dùng CPU (áp dụng từ lần render sau)'); pgChar3d(); };
   if ($('#c3setup')) $('#c3setup').onclick = async () => { const r = await api('/api/char3d/setup', { method: 'POST', body: {} }); watch(r.job, $('#c3setupst'), 'Đang cài Blender', j => { if (j.code === 0) { toast('Đã cài Blender'); pgChar3d(); } }); };
   $('#c3new').onclick = async () => { const name = $('#c3name').value.trim(); if (!name) return toast('Nhập tên nhân vật', true);
     const r = await api('/api/char3d/new', { method: 'POST', body: { name, base: $('#c3base').value } }); if (r.error) return toast(r.error, true); C3SEL = r.id; toast('Đã tạo ' + r.name); pgChar3d(); };
