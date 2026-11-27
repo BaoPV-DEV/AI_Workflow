@@ -31,11 +31,19 @@ async function route() {
   }
   try {
     await ({ home: pgHome, library: pgLibrary, trends: pgTrends, write: pgWrite, narration: pgNarration, gpu: pgGpu, render: pgRender, char3d: pgChar3d, cinema: pgCinema, tools: pgTools, settings: pgSettings })[p](arg2);
-  } catch (e) {  // không để trang trắng: báo lỗi + cách xử lý
+  } catch (e) {  // không để trang trắng: một thẻ đơn giản + nút sửa
     console.error(e);
-    html(document.getElementById('pg-' + p), `<div class="wrap"><div class="card"><div class="cap">Trang này chưa mở được</div>
-      <p class="small">${esc(e.message || e)}</p><p class="small muted">Thường do Studio đang chạy bản cũ sau khi cập nhật code: bấm <b>Khởi động lại</b> ở thanh trên cùng, hoặc tắt Studio và mở lại bằng shortcut.</p></div></div>`);
-    staleBanner(true);
+    const old = META && META.version !== NEED_SERVER;
+    html(document.getElementById('pg-' + p), `<div class="wrap"><div class="card fixcard">
+      <div class="fixico">${old ? '🔄' : '⚠️'}</div>
+      <h3>${old ? 'Cần khởi động lại Studio' : 'Trang này đang lỗi'}</h3>
+      <p class="muted">${old ? 'Bạn vừa cập nhật code mới. Khởi động lại một lần là dùng được (video và cài đặt giữ nguyên).' : 'Thử khởi động lại Studio. Nếu vẫn lỗi, gửi dòng chi tiết bên dưới cho Claude.'}</p>
+      <button class="btn pri" id="fixrestart">Khởi động lại</button>
+      ${old ? '' : `<details class="small muted" style="margin-top:12px"><summary>Chi tiết</summary>${esc(e.message || e)}</details>`}
+    </div></div>`);
+    if ($('#stale')) $('#stale').remove();  // không hiện 2 thông báo cùng lúc
+    $('#fixrestart').onclick = () => restartStudio($('#fixrestart').parentElement);
+    return;
   }
 }
 window.addEventListener('hashchange', route);
@@ -90,6 +98,8 @@ function watch(jobId, el, label, onDone) {
 let CINE = { seconds: 60, aspect: '16:9' };
 async function pgCinema() {
   const st = await api('/api/cinema');
+  if (!st || !Array.isArray(st.projects)) throw new Error('Máy chủ chưa có trang Điện ảnh');
+  st.characters = st.characters || [];
   const cli = META.brain.backend === 'cli';
   const secs = [[20, '20 giây (thử)'], [30, '30 giây'], [60, '1 phút (Shorts)'], [90, '1,5 phút'], [180, '3 phút'], [480, '8 phút'], [600, '10 phút']];
   const doc = { 'storyboard.md': '📋 Storyboard', 'audit.md': '🛡 Kiểm duyệt', 'package.md': '🚀 SEO', 'qa-report.md': '✅ QA' };
@@ -670,19 +680,20 @@ function staleBanner(old) {
   d.innerHTML = '🔄 Studio vừa được cập nhật code mới. Khởi động lại để dùng bản mới (video và cài đặt giữ nguyên). <button class="btn2 pri">Khởi động lại</button>';
   Object.assign(d.style, { position: 'fixed', top: '10px', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: '#fff7ed', border: '1px solid #fdba74', color: '#7c2d12', padding: '8px 14px', borderRadius: '12px', boxShadow: '0 8px 24px #0002', display: 'flex', gap: '10px', alignItems: 'center', fontSize: '14px' });
   document.body.appendChild(d);
-  d.querySelector('button').onclick = async () => {
-    const r0 = await fetch('/api/restart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-    if (r0.status === 404) {  // máy chủ quá cũ, chưa có nút khởi động lại: tắt nó, người dùng mở lại bằng shortcut
-      await fetch('/api/shutdown', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
-      d.innerHTML = '✔ Đã tắt Studio cũ. Bấm đúp shortcut <b>AI Workflow Studio</b> để mở bản mới.';
-      return;
-    }
-    const r = await r0.json();
-    if (r.error) return toast(r.error, true);
-    d.innerHTML = '<span class="spin"></span> Đang khởi động lại…';
-    for (let i = 0; i < 30; i++) { await new Promise(z => setTimeout(z, 1000)); try { const m = await fetch('/api/meta'); if (m.ok) return location.reload(); } catch { } }
-    d.textContent = 'Không khởi động lại được: mở lại bằng shortcut AI Workflow Studio.';
-  };
+  d.querySelector('button').onclick = () => restartStudio(d);
+}
+async function restartStudio(d) {
+  const r0 = await fetch('/api/restart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => null);
+  if (!r0 || r0.status === 404) {  // máy chủ quá cũ, chưa có nút khởi động lại: tắt nó, người dùng mở lại bằng shortcut
+    await fetch('/api/shutdown', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
+    d.innerHTML = '✔ Đã tắt Studio cũ. Bấm đúp shortcut <b>AI Workflow Studio</b> để mở bản mới.';
+    return;
+  }
+  const r = await r0.json();
+  if (r.error) return toast(r.error, true);
+  d.innerHTML = '<span class="spin"></span> Đang khởi động lại…';
+  for (let i = 0; i < 30; i++) { await new Promise(z => setTimeout(z, 1000)); try { const m = await fetch('/api/meta'); if (m.ok) return location.reload(); } catch { } }
+  d.textContent = 'Không khởi động lại được: mở lại bằng shortcut AI Workflow Studio.';
 }
 ping(); setInterval(ping, 5000);
 document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && ping());
