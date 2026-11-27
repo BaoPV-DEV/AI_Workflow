@@ -130,7 +130,18 @@ def scene_input(pid: str, sid: str) -> dict:
             "input": {"props": props, "style": c["style"], "cast": cast, "acting": pipeline.resolve_acting(s, cast),
                       "words": s.get("word_timings") or [], "duration": s["duration"], "width": c["w"], "height": c["h"],
                       "camera": s.get("camera", "none"), "text": s.get("voice_text", ""),
-                      "assets": f"/files/{d.name}/assets/", "actions": config.library("actions")["actions"]}}
+                      "assets": f"/files/{d.name}/assets/", "actions": config.library("actions")["actions"],
+                      "char3d": _char3d_http(cast)}}
+
+
+def _char3d_http(cast: dict) -> dict:
+    """Ảnh nhân vật 3D cho khung xem trước trong Studio (http thay cho file://)."""
+    from engine import char3d
+    info = char3d.scene_info(cast)
+    for n, v in info.items():
+        for st in v["sets"]:
+            st["base"] = f"/files/_cast3d/{cast[n]['model3d']}/{st['key']}/"
+    return info
 
 
 class H(SimpleHTTPRequestHandler):
@@ -236,12 +247,21 @@ class H(SimpleHTTPRequestHandler):
                 return self._file(self._safe(config.TEMPLATES / "html_scenes", u[5:]))
             if u.startswith("/files/"):
                 return self._file(self._safe(config.workspace(), u[7:]))
+            if u == "/api/char3d":
+                from engine import char3d
+                st = char3d.status()
+                st["estimates"] = {pf: {q: char3d.estimate(char3d.plan("", pf), q) for q in char3d.QUALITY} for pf in char3d.PROFILES}
+                return self._json(st)
+            if u == "/api/char3d/spec":
+                from engine import char3d
+                return self._json(char3d.load_spec(self._q().get("id", "")))
             if u == "/api/meta":
                 acts = config.library("actions")
                 return self._json({"styles": {s: config.style(s) for s in config.list_styles()},
                                    "templates": catalog.templates(with_demo=True),
                                    "actions": {k: v.get("label", k) for k, v in acts["actions"].items()},
                                    "characters": config.library("characters")["characters"],
+                                   "char3d": __import__("engine.char3d", fromlist=["x"]).characters(),
                                    "moods": MOODS, "moves": MOVES, "holds": HOLDS, "emotes": EMOTES,
                                    "voices": config.settings().get("tts", {}).get("voices", {}),
                                    "languages": config.library("languages")["languages"], "brain": brain(),
@@ -371,6 +391,23 @@ class H(SimpleHTTPRequestHandler):
                 return self._json({"project_id": d.name, "scenes": len(data["scenes"]), "errors": manifest.validate(data)})
             if u.startswith("/api/p/") and u.endswith("/publish"):
                 return self._json({"job": run_fn(studio_api.publish_pack, u.split("/")[3], b.get("platform", "YouTube"))})
+            if u == "/api/char3d/setup":
+                return self._json({"job": run_job(["char3d", "setup"])})
+            if u == "/api/char3d/new":
+                from engine import char3d
+                return self._json(char3d.new(b.get("id") or b.get("name", "nhan_vat"), b.get("base", "mia"), name=b.get("name")))
+            if u == "/api/char3d/spec":
+                from engine import char3d
+                spec = b["spec"]
+                if spec.get("id") != b["id"]:
+                    return self._json({"error": "Không đổi được id trong JSON"}, 400)
+                char3d.spec_path(b["id"]).write_text(json.dumps(spec, ensure_ascii=False, indent=1), encoding="utf-8")
+                return self._json({"ok": True})
+            if u == "/api/char3d/sheet":
+                return self._json({"job": run_job(["char3d", "sheet", b["id"], "--quality", b.get("quality", "nhap")])})
+            if u == "/api/char3d/sprites":
+                return self._json({"job": run_job(["char3d", "sprites", b["id"], "--profile", b.get("profile", "co_ban"),
+                                                   "--quality", b.get("quality", "chuan"), "--light", b.get("light", "day")])})
             if u.startswith("/api/p/") and u.endswith("/audit"):
                 return self._json({"job": run_fn(studio_api.policy_audit, u.split("/")[3])})
             if u.startswith("/api/p/") and u.endswith("/audit/apply"):

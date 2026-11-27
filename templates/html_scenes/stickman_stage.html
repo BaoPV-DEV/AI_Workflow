@@ -6,7 +6,7 @@
  "props": {"title": "chữ lớn phía trên (≤6 từ, tuỳ chọn)", "title_at": "lúc hiện title", "backdrop": "plain|studio|room|bedroom|kitchen|bathroom|office|classroom|library|lab|cafe|restaurant|supermarket|shop|hospital|bank|courtroom|museum|gallery|cinema|newsroom|podcast|server_room|factory|garage|gym|spaceship|airport|train_station|subway|bus|street|city_night|alley|rooftop|construction|playground|stadium|park|nature|forest|jungle|waterfall|lake|river|beach|island|underwater|mountain|desert|volcano|cave|arctic|winter_village|farm|village|pagoda|temple|castle|prehistoric|campsite|sky|space|moon|mars|stage|night",
            "time": "day|sunset|night – thời điểm (bầu trời, đèn, sao)", "weather": "none|rain|snow|leaves|fog",
            "items": "[{emoji|text, x:0-1, y:0-1, size:0-1, at}] đồ vật/biểu tượng hiện ra trên sân khấu"},
- "needs": "acting trong scene; who = tên trong cast"}
+ "needs": "acting trong scene; who = tên trong cast. Nhân vật 3D: cast {\"model3d\": \"<id>\"} (xem vf char3d list)"}
 </script>
 <script type="application/json" data-demo>
 {"duration": 6, "props": {"title": "TIẾT KIỆM 90% TOKEN", "backdrop": "office",
@@ -23,6 +23,7 @@
 <script src="_lib/backdrops.js"></script>
 <script src="_lib/backdrops2.js"></script>
 <script src="_lib/stickman.js"></script>
+<script src="_lib/char3d.js"></script>
 </head><body>
 <script>
 let svg, sticks = {}, tracks, items = [], titleEl, ground, S, input, bd;
@@ -43,7 +44,12 @@ VF.scene({
     const names = Object.keys(cast).filter(n => !inp.acting.length || inp.acting.some(b => b.who === n));
     if (!names.length) names.push(Object.keys(cast)[0]);
     sticks = {};
-    names.forEach(n => { sticks[n] = new VF.Stick(figG, cast[n], S, colors); });
+    const LIGHT = { night: 'night', sunset: 'golden' }, INDOOR = /room|kitchen|bath|office|class|library|lab|cafe|restaurant|market|shop|hospital|bank|court|museum|gallery|cinema|news|podcast|server|factory|garage|gym|ship|airport|station|subway|bus|studio|stage/;
+    const light = LIGHT[p.time] || (INDOOR.test(p.backdrop || '') ? 'interior' : 'day');
+    names.forEach(n => {
+      const c3 = cast[n].model3d && (inp.char3d || {})[n];
+      sticks[n] = c3 && c3.sets && c3.sets.length ? new VF.Char3D(figG, cast[n], S, c3, light) : new VF.Stick(figG, cast[n], S, colors);
+    });
     VF.lib = { actions: inp.actions || window.__actions || { stand: { frames: [{ pose: {} }] } } };
     tracks = VF.stick.timeline(inp.acting || [], names, W, VF.lib);
     items = (p.items || []).map(it => {
@@ -66,7 +72,7 @@ VF.scene({
       const s = VF.stick.stateAt(tracks[n], t, VF.lib, W);
       const w = (inp.words || []).find(x => t >= x.start && t < x.end);
       const talk = s.talking && w ? 0.45 + 0.55 * Math.abs(Math.sin((t - w.start) * 13)) : 0;
-      st.pose(s.p, s.x, ground, s.face, { mood: s.mood, hold: s.hold, t, label: s.label, seated: s.seated, talk, idle: s.idle, emote: s.emote, emoteAge: s.emoteAge });
+      st.pose(s.p, s.x, ground, s.face, { mood: s.mood, hold: s.hold, t, label: s.label, seated: s.seated, talk, idle: s.idle, emote: s.emote, emoteAge: s.emoteAge, act: s.act, since: s.since, walking: s.walking });
       const since = t - (s.sayT ?? 0);
       st.say(s.say || '', s.say ? VF.clamp(since / 0.15) * VF.clamp((2.6 - since) / 0.3) : 0);
     }

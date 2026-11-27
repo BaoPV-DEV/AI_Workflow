@@ -37,7 +37,12 @@ def text(compact: bool = True) -> str:
         lines.append(f"- {s}: {config.style(s).get('label', '')}")
     chars = config.library("characters")["characters"]
     acts = config.library("actions")
+    from . import char3d
+    c3 = [c for c in char3d.characters() if c["sets"]]
     lines += ["", "## Nhân vật (cast.<Tên>.preset)", ", ".join(chars),
+              "", "## Nhân vật 3D (cast.<Tên> = {\"model3d\": id}, chỉ trong stickman_stage; act tự quy về động tác 3D gần nhất)",
+              "; ".join(f"{c['id']} ({c['name']}: {', '.join(sorted({k.split('_')[0] for k in c['sets']}))})" for c in c3)
+              or "(chưa render nhân vật 3D nào – dùng người que)",
               "", "## Acting (scene.acting[] cho stickman_stage)",
               "beat = {at: 'từ trong lời đọc'|'60%'|giây, act, who?, move?, mood?, hold?, say?, face?}",
               "act: " + ", ".join(acts["actions"]),

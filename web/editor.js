@@ -433,13 +433,18 @@ function renderCast() {
   const color = c => /^#[0-9a-f]{6}$/i.test(c.shirt || '') ? c.shirt : (/^#/.test(META.characters[c.preset]?.shirt || '') ? META.characters[c.preset].shirt : '#7fb3d5');
   $('#castlist').innerHTML = Object.entries(M.cast || {}).map(([name, c]) => `<div class="cast" data-n="${esc(name)}">
     <input value="${esc(name)}" data-c="name" aria-label="Tên nhân vật">
-    <select data-c="preset" aria-label="Mẫu nhân vật">${presets.map(p => `<option ${p === c.preset ? 'selected' : ''}>${p}</option>`).join('')}</select>
+    <select data-c="preset" aria-label="Mẫu nhân vật"><optgroup label="Người que">${presets.map(p => `<option ${!c.model3d && p === c.preset ? 'selected' : ''}>${p}</option>`).join('')}</optgroup>
+      ${(META.char3d || []).length ? `<optgroup label="Nhân vật 3D (Blender)">${META.char3d.map(x => `<option value="3d:${esc(x.id)}" ${c.model3d === x.id ? 'selected' : ''} ${x.sets.length ? '' : 'disabled'}>🧍 ${esc(x.name)}${x.sets.length ? '' : ' (chưa render)'}</option>`).join('')}</optgroup>` : ''}</select>
     <input type="color" data-c="shirt" value="${color(c)}" title="Màu áo">
     <button class="icon" data-c="del" title="Xoá nhân vật">✕</button></div>`).join('') || '<p class="hint">Chưa có nhân vật. Cảnh người que sẽ dùng nhân vật mặc định.</p>';
   $('#castlist').querySelectorAll('.cast').forEach(row => {
     const name = row.dataset.n;
     row.querySelector('[data-c=name]').onchange = e => { const nn = e.target.value.trim(); if (!nn || nn === name || M.cast[nn]) return; change(m => { m.cast[nn] = m.cast[name]; delete m.cast[name]; m.scenes.forEach(s => (s.acting || []).forEach(b => { if (b.who === name) b.who = nn; })); }); renderCast(); renderInspector(); };
-    row.querySelector('[data-c=preset]').onchange = e => { change(m => m.cast[name].preset = e.target.value); loadFrame(true); };
+    row.querySelector('[data-c=preset]').onchange = e => {
+      const v = e.target.value;
+      change(m => { if (v.startsWith('3d:')) m.cast[name].model3d = v.slice(3); else { delete m.cast[name].model3d; m.cast[name].preset = v; } });
+      loadFrame(true);
+    };
     row.querySelector('[data-c=shirt]').oninput = e => change(m => m.cast[name].shirt = e.target.value, 'shirt' + name);
     row.querySelector('[data-c=shirt]').onchange = () => loadFrame(true);
     row.querySelector('[data-c=del]').onclick = () => { change(m => delete m.cast[name]); renderCast(); };

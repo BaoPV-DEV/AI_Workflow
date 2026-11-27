@@ -1,0 +1,62 @@
+{
+ "id": "mia",
+ "name": "Mia",
+ "role": "Field botanist who gets shrunk to ant size in her own garden. Curious, practical, seen mostly from behind.",
+ "why": "Topic = tiny human in a garden: outdoor explorer kit (olive field jacket, khaki trousers, hiking boots, red backpack) reads instantly as 'expedition' and pops against green foliage.",
+ "body": {
+  "gender": 0.0,
+  "age_years": 29,
+  "muscle": 0.55,
+  "weight": 0.42,
+  "height": 0.5,
+  "proportions": 0.75,
+  "ethnicity": {
+   "asian": 0.5,
+   "caucasian": 0.3,
+   "african": 0.2
+  }
+ },
+ "skin": {
+  "tone": "#c99a7c",
+  "blush": 0.6
+ },
+ "hair": {
+  "style": "ponytail",
+  "color": "#2a1a10"
+ },
+ "eyes": {
+  "iris": "#4a3020"
+ },
+ "outfit": {
+  "top": {
+   "type": "field jacket",
+   "length": "hip",
+   "sleeves": "long",
+   "material": "nylon",
+   "color": "#55623f",
+   "collar": "high",
+   "zip": true
+  },
+  "bottom": {
+   "type": "pants",
+   "material": "canvas",
+   "color": "#c2ae8a"
+  },
+  "shoes": {
+   "type": "hiking",
+   "color": "#4a3020",
+   "sole": "#1a1410"
+  },
+  "extras": [
+   {
+    "type": "backpack",
+    "color": "#b8412c",
+    "size": 0.85
+   }
+  ]
+ },
+ "render": {
+  "res": 960,
+  "samples": 24
+ }
+}

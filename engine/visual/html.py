@@ -10,7 +10,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from .. import config
+from .. import char3d, config
 from ..util import encode_args, ffmpeg
 from .base import Adapter, Job, register
 
@@ -65,6 +65,7 @@ def scene_input(job: Job) -> dict:
         "assets": (job.project_dir / "assets").as_uri() + "/",
         "actions": config.library("actions")["actions"],
         "captions": s.get("_captions"),
+        "char3d": char3d.scene_info(job.cast),
     }
 
 
@@ -97,7 +98,7 @@ class HtmlAdapter(Adapter):
     visual_types = ("html_animation", "svg_graphic")
 
     def fingerprint(self, job: Job) -> list:
-        return [template_path(job), *sorted(LIB.glob("*.js")), LIB / "base.css", job.style, job.cast]
+        return [template_path(job), *sorted(LIB.glob("*.js")), LIB / "base.css", job.style, job.cast, char3d.fingerprint(job.cast)]
 
     def render(self, job: Job) -> Path:
         fps = job.fps if not job.draft else max(12, job.fps // 2)

@@ -22,7 +22,7 @@
   const prog = (t, start, dur, e = 'out') => ease[e](clamp((t - start) / Math.max(dur, 1e-6)));
 
   function el(tag, attrs = {}, parent = null, svg = false) {
-    const n = svg || ['svg', 'g', 'path', 'circle', 'rect', 'line', 'polyline', 'polygon', 'text', 'ellipse', 'defs', 'linearGradient', 'stop', 'tspan'].includes(tag)
+    const n = svg || ['svg', 'g', 'path', 'circle', 'rect', 'line', 'polyline', 'polygon', 'text', 'ellipse', 'defs', 'linearGradient', 'radialGradient', 'stop', 'tspan', 'image', 'clipPath', 'mask', 'filter', 'use'].includes(tag)
       ? document.createElementNS('http://www.w3.org/2000/svg', tag) : document.createElement(tag);
     for (const [k, v] of Object.entries(attrs)) {
       if (k === 'text') n.textContent = v;
@@ -71,7 +71,10 @@
     def && def.setup && def.setup(input, root, VF);
     setupCaptions();
     seek(0);
-    window.__vfReady = true;
+    // template có thể đăng ký việc chờ (vd ảnh nhân vật 3D) bằng VF.waitFor(promise): chỉ báo sẵn sàng khi xong
+    const pend = VF._pending.splice(0);
+    if (pend.length) Promise.allSettled(pend).then(() => { seek(0); window.__vfReady = true; });
+    else window.__vfReady = true;
   }
 
   function fit() { // thu nhỏ khung cho vừa iframe khi xem thử
@@ -163,6 +166,7 @@
 
   window.VF = {
     ease, clamp, lerp, prog, el, wordAt, at,
+    _pending: [], waitFor(p) { this._pending.push(p); return p; },
     get input() { return input; },
     scene(d) {
       def = d;

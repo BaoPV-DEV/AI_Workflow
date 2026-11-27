@@ -73,3 +73,12 @@ vf all vi_sao_bau_troi_mau_xanh
 | Lỗi edge-tts / mạng | Kiểm tra internet. Thử hình không tiếng: tạo `config\settings.local.yaml` với `tts: {engine: silent}` |
 | Lỗi `h264_nvenc` | `config\settings.local.yaml`: `render: {encoder: libx264}` |
 | Máy nóng / chậm | `config\settings.local.yaml`: `render: {workers: 1}` |
+
+## Nhân vật 3D (Blender)
+
+Thay người que bằng nhân vật người thật dựng bằng Blender (bộ hero3d của repo Skills):
+
+1. Studio → **🧍 Nhân vật 3D** → **Cài Blender** (1 lần, ~500 MB, cần `git`). Hoặc `vf char3d setup`.
+2. Chọn nhân vật mẫu (Mia, Rain Hero) hoặc **Tạo nhân vật mới** → **Sửa ngoại hình** → **Bảng xem trước** để duyệt.
+3. **Render động tác** (1 lần cho mỗi nhân vật; máy không có card NVIDIA mất ~15 phút cho 6 động tác chuẩn).
+4. Trình sửa cảnh → **Cài đặt video** → Nhân vật → chọn mục **🧍 Nhân vật 3D**. Cảnh "Người que diễn" sẽ dùng nhân vật 3D.

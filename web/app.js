@@ -1,5 +1,5 @@
 /* AI Workflow Studio – điều hướng và các trang (dùng chung $, esc, api, toast, META… với editor.js). */
-const PAGES = ['home', 'library', 'trends', 'write', 'narration', 'gpu', 'editor', 'render', 'tools', 'settings'];
+const PAGES = ['home', 'library', 'trends', 'write', 'narration', 'gpu', 'editor', 'render', 'char3d', 'tools', 'settings'];
 const BRAIN_NAME = { api: 'API key', cli: 'Claude Code (gói Claude)', manual: 'chưa kết nối' };
 const ASPECT_NAME = { '16:9': 'Ngang 16:9', '9:16': 'Dọc 9:16', '1:1': 'Vuông 1:1', '4:5': 'Dọc 4:5' };
 const PLATFORM_HINT = { '16:9': 'Ngang 16:9: hợp với YouTube, Facebook, LinkedIn.', '9:16': 'Dọc 9:16: hợp với YouTube Shorts, TikTok, Instagram Reels.', '1:1': 'Vuông 1:1: hợp với Instagram feed, Facebook.', '4:5': 'Dọc 4:5: hợp với Instagram feed, Facebook.' };
@@ -29,7 +29,7 @@ async function route() {
     setTimeout(() => { fitFrame && fitFrame(); M && renderTimeline(); }, 50);
     return;
   }
-  await ({ home: pgHome, library: pgLibrary, trends: pgTrends, write: pgWrite, narration: pgNarration, gpu: pgGpu, render: pgRender, tools: pgTools, settings: pgSettings })[p](arg2);
+  await ({ home: pgHome, library: pgLibrary, trends: pgTrends, write: pgWrite, narration: pgNarration, gpu: pgGpu, render: pgRender, char3d: pgChar3d, tools: pgTools, settings: pgSettings })[p](arg2);
 }
 window.addEventListener('hashchange', route);
 document.querySelectorAll('.nav').forEach(n => n.onclick = () => go(n.dataset.pg));
@@ -75,6 +75,56 @@ function watch(jobId, el, label, onDone) {
     onDone && onDone(j);
   };
   tick();
+}
+
+/* ================= NHÂN VẬT 3D (Blender, từ repo Skills) ================= */
+let C3SEL = null;
+async function pgChar3d() {
+  const st = await api('/api/char3d');
+  const est = (pf, q) => st.estimates[pf][q];
+  const mins = m => m < 1 ? '<1 phút' : m < 60 ? `~${Math.round(m)} phút` : `~${(m / 60).toFixed(1)} giờ`;
+  const card = c => `<div class="c3 ${C3SEL === c.id ? 'on' : ''}">
+      <div class="c3img" style="${c.sheet ? `background-image:url('${c.sheet}')` : ''}">${c.sheet ? '' : '<span>Chưa có bảng xem trước</span>'}</div>
+      <div class="c3bd"><div class="t">${esc(c.name)} <span class="muted small">· ${esc(c.id)}</span></div>
+        <div class="small muted">${esc(c.role || '')}</div>
+        <div class="bs" style="margin-top:6px">${c.sets.length ? c.sets.map(k => `<span class="badge ok">${esc(k.split('_')[0])}</span>`).join('') : '<span class="badge">chưa render động tác</span>'}</div></div>
+      <div class="ac">
+        <button class="btn2" data-sheet="${esc(c.id)}" ${st.ready ? '' : 'disabled'}>👁 Bảng xem trước</button>
+        <select data-pf="${esc(c.id)}"><option value="co_ban">6 động tác cơ bản</option><option value="day_du">12 động tác đầy đủ</option></select>
+        <select data-q="${esc(c.id)}"><option value="nhap">Nháp (nhanh)</option><option value="chuan" selected>Chuẩn</option><option value="cao">Cao</option></select>
+        <button class="btn2 pri" data-spr="${esc(c.id)}" ${st.ready ? '' : 'disabled'}>🎬 Render động tác</button>
+        <button class="btn2" data-edit="${esc(c.id)}">✏️ Sửa ngoại hình</button>
+        <span class="st small muted" data-st="${esc(c.id)}"></span></div></div>`;
+  html(page('char3d'), `<div class="wrap">
+    <div class="ph"><h1 style="white-space:nowrap">🧍 Nhân vật 3D</h1><p>Nhân vật người thật dựng bằng Blender (bộ hero3d của repo Skills). Mỗi nhân vật render <b>1 lần</b>, mọi video sau dùng lại.
+      Dùng trong video: Trình sửa cảnh → Cài đặt video → Nhân vật → chọn mục <b>🧍 Nhân vật 3D</b> (chỉ áp cho cảnh "Người que diễn").</p></div>
+    <div class="card"><div class="cap">Cài đặt</div>
+      ${st.ready ? `<p class="small">✔ Blender sẵn sàng · ${st.gpu ? `Card <b>${esc(st.gpu)}</b>: render nhanh` : 'Không thấy card NVIDIA: render bằng CPU (chậm, nên để chạy lúc rảnh)'}</p>`
+        : `<p class="small">Cần cài Blender một lần (~500 MB: Python 3.13 riêng + bpy + dữ liệu cơ thể MPFB2). Máy cần có <b>git</b>.</p>
+           <div class="row"><button class="btn2 pri" id="c3setup">⬇ Cài Blender cho nhân vật 3D</button><span class="st small muted" id="c3setupst"></span></div>`}
+      <p class="small muted" style="margin-top:8px">Thời gian ước tính cho 1 nhân vật trên máy này: 6 động tác chuẩn ${mins(est('co_ban', 'chuan').minutes)}, nháp ${mins(est('co_ban', 'nhap').minutes)} · 12 động tác chuẩn ${mins(est('day_du', 'chuan').minutes)}.</p></div>
+    <div class="card"><div class="cap">Tạo nhân vật mới</div>
+      <div class="row"><input id="c3name" placeholder="Tên nhân vật, vd Minh"><select id="c3base">${st.characters.map(c => `<option value="${esc(c.id)}">dựa trên ${esc(c.name)}</option>`).join('')}</select><button class="btn2 pri" style="flex:none" id="c3new">+ Tạo</button></div>
+      <p class="small muted">Tạo xong bấm "✏️ Sửa ngoại hình" để đổi tóc, quần áo, màu da, phụ kiện; hoặc nhờ Claude Code: <i>"tạo nhân vật 3D bác sĩ trẻ cho video y tế"</i>.</p></div>
+    <div class="c3grid">${st.characters.map(card).join('')}</div>
+    <dialog id="c3dlg"><div class="dhead"><b>Ngoại hình (JSON)</b><button class="icon" onclick="c3dlg.close()">✕</button></div>
+      <div class="dbody"><p class="small muted">tóc: none|bald|buzz|short|messy|bob|long|wavy|curly|afro|ponytail|bun · áo (length): crop|waist|hip|thigh|knee|calf · quần: pants|jeans|shorts|skirt|leggings… · giày: boots|sneakers|shoes|sandals… · phụ kiện: backpack|glasses|beanie|cap|scarf. Đổi xong render lại bảng xem trước và động tác.</p>
+      <textarea id="c3json" rows="22" style="width:100%;font-family:monospace;font-size:12px"></textarea></div>
+      <div class="dfoot"><button class="btn2 pri" id="c3save">Lưu</button></div></dialog></div>`);
+  const P = page('char3d');
+  if ($('#c3setup')) $('#c3setup').onclick = async () => { const r = await api('/api/char3d/setup', { method: 'POST', body: {} }); watch(r.job, $('#c3setupst'), 'Đang cài Blender', j => { if (j.code === 0) { toast('Đã cài Blender'); pgChar3d(); } }); };
+  $('#c3new').onclick = async () => { const name = $('#c3name').value.trim(); if (!name) return toast('Nhập tên nhân vật', true);
+    const r = await api('/api/char3d/new', { method: 'POST', body: { name, base: $('#c3base').value } }); if (r.error) return toast(r.error, true); C3SEL = r.id; toast('Đã tạo ' + r.name); pgChar3d(); };
+  const stEl = id => P.querySelector(`[data-st="${id}"]`);
+  P.querySelectorAll('[data-sheet]').forEach(b => b.onclick = async () => { const id = b.dataset.sheet;
+    const r = await api('/api/char3d/sheet', { method: 'POST', body: { id, quality: 'nhap' } }); watch(r.job, stEl(id), 'Đang dựng bảng xem trước', j => { if (j.code === 0) pgChar3d(); }); });
+  P.querySelectorAll('[data-spr]').forEach(b => b.onclick = async () => { const id = b.dataset.spr, pf = P.querySelector(`[data-pf="${id}"]`).value, q = P.querySelector(`[data-q="${id}"]`).value;
+    if (!confirm(`Render ${pf === 'co_ban' ? 6 : 12} động tác cho ${id}, ước tính ${mins(est(pf, q).minutes)}?\nChỉ cần làm 1 lần cho nhân vật này. Đóng tab vẫn chạy tiếp, mở lại Studio để xem kết quả.`)) return;
+    const r = await api('/api/char3d/sprites', { method: 'POST', body: { id, profile: pf, quality: q } }); watch(r.job, stEl(id), 'Đang render', j => { if (j.code === 0) { toast('Xong động tác cho ' + id); META.char3d = null; pgChar3d(); } }); });
+  P.querySelectorAll('[data-edit]').forEach(b => b.onclick = async () => { C3SEL = b.dataset.edit; $('#c3json').value = JSON.stringify(await api('/api/char3d/spec?id=' + encodeURIComponent(C3SEL)), null, 1); c3dlg.showModal(); });
+  $('#c3save').onclick = async () => { let spec; try { spec = JSON.parse($('#c3json').value); } catch (e) { return toast('JSON lỗi: ' + e.message, true); }
+    const r = await api('/api/char3d/spec', { method: 'POST', body: { id: C3SEL, spec } }); if (r.error) return toast(r.error, true); c3dlg.close(); toast('Đã lưu. Bấm "Bảng xem trước" để xem lại.'); };
+  api('/api/meta').then(m => { META.char3d = m.char3d; }).catch(() => {});
 }
 
 /* ================= BẮT ĐẦU ================= */

@@ -1,0 +1,49 @@
+{
+ "id": "rain_hero",
+ "name": "Rain Hero",
+ "role": "Channel mascot: lone figure in a bright yellow hooded raincoat, usually seen from behind.",
+ "body": {
+  "gender": 1.0,
+  "age_years": 28,
+  "muscle": 0.62,
+  "weight": 0.5,
+  "height": 0.65,
+  "proportions": 0.8
+ },
+ "skin": {
+  "tone": "#b98a6c"
+ },
+ "hair": {
+  "style": "short",
+  "color": "#1c140e"
+ },
+ "eyes": {
+  "iris": "#3b2a1c"
+ },
+ "outfit": {
+  "top": {
+   "type": "raincoat",
+   "material": "pvc",
+   "color": "#ffd23f",
+   "length": "knee",
+   "sleeves": "long",
+   "hood": true,
+   "looseness": 0.014,
+   "zip": true
+  },
+  "bottom": {
+   "type": "pants",
+   "material": "cotton",
+   "color": "#1d2230"
+  },
+  "shoes": {
+   "type": "boots",
+   "material": "rubber",
+   "color": "#121214"
+  }
+ },
+ "render": {
+  "res": 960,
+  "samples": 32
+ }
+}

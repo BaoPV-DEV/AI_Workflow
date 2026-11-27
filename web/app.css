@@ -166,3 +166,11 @@ body { font: 14px/1.5 var(--font); color: var(--ink); background: var(--page); d
 
 .aud { padding: 9px 11px; border: 1px solid var(--card-line); border-radius: 10px; margin-bottom: 7px; }
 .small.ok, .aud .ok { color: #15803d; }
+
+.c3grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; margin-top: 14px; }
+.c3 { background: #fff; border: 1px solid var(--card-line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.c3.on { border-color: var(--violet); box-shadow: 0 0 0 2px #ede9fe; }
+.c3img { aspect-ratio: 4.3/1; background: #383a40 center/contain no-repeat; display: grid; place-items: center; color: #9aa0ad; font-size: 13px; }
+.c3bd { padding: 12px 13px 6px; }
+.c3 .ac { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 13px; border-top: 1px solid var(--card-line); align-items: center; }
+.c3 .ac select { width: auto; font-size: 12px; padding: 3px 6px; }

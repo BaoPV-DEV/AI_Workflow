@@ -8,7 +8,7 @@
 - **kinetic_text** – Chữ động theo giọng đọc: từng cụm từ bật lên đúng lúc được đọc, từ khoá tô màu. Hợp Shorts/hook. Nên tắt phụ đề khi dùng nhiều (render.captions). | props: emphasize: [từ] cần tô màu nhấn; group: số từ mỗi màn (mặc định 3); bg_word: chữ mờ cực lớn phía sau (tuỳ chọn)
 - **quote_card** – Trích dẫn: chữ hiện theo nhịp đọc, dấu ngoặc lớn, tên tác giả. | props: quote: câu trích (≤25 từ); author: tác giả / nguồn
 - **stat_card** – Một con số lớn đếm lên, kèm nhãn. Dùng mỗi khi lời đọc nêu số liệu. | props: value: số (vd 90); prefix: trước số, vd '$'; suffix: sau số, vd '%'; label: nhãn ngắn; sub: nguồn/ghi chú nhỏ; at: lúc bắt đầu đếm (từ trong lời đọc hoặc %); decimals: số chữ số thập phân
-- **stickman_stage** – Sân khấu người que: nhân vật trong cast diễn theo 'acting' của cảnh (đi, chỉ, cầm đồ, cảm xúc, thoại). | props: title: chữ lớn phía trên (≤6 từ, tuỳ chọn); title_at: lúc hiện title; backdrop: plain|studio|room|bedroom|kitchen|bathroom|office|classroom|library|lab|cafe|restaurant|supermarket|shop|hospital|bank|courtroom|museum|gallery|cinema|newsroom|podcast|server_room|factory|garage|gym|spaceship|airport|train_station|subway|bus|street|city_night|alley|rooftop|construction|playground|stadium|park|nature|forest|jungle|waterfall|lake|river|beach|island|underwater|mountain|desert|volcano|cave|arctic|winter_village|farm|village|pagoda|temple|castle|prehistoric|campsite|sky|space|moon|mars|stage|night; time: day|sunset|night – thời điểm (bầu trời, đèn, sao); weather: none|rain|snow|leaves|fog; items: [{emoji|text, x:0-1, y:0-1, size:0-1, at}] đồ vật/biểu tượng hiện ra trên sân khấu | cần: acting trong scene; who = tên trong cast
+- **stickman_stage** – Sân khấu người que: nhân vật trong cast diễn theo 'acting' của cảnh (đi, chỉ, cầm đồ, cảm xúc, thoại). | props: title: chữ lớn phía trên (≤6 từ, tuỳ chọn); title_at: lúc hiện title; backdrop: plain|studio|room|bedroom|kitchen|bathroom|office|classroom|library|lab|cafe|restaurant|supermarket|shop|hospital|bank|courtroom|museum|gallery|cinema|newsroom|podcast|server_room|factory|garage|gym|spaceship|airport|train_station|subway|bus|street|city_night|alley|rooftop|construction|playground|stadium|park|nature|forest|jungle|waterfall|lake|river|beach|island|underwater|mountain|desert|volcano|cave|arctic|winter_village|farm|village|pagoda|temple|castle|prehistoric|campsite|sky|space|moon|mars|stage|night; time: day|sunset|night – thời điểm (bầu trời, đèn, sao); weather: none|rain|snow|leaves|fog; items: [{emoji|text, x:0-1, y:0-1, size:0-1, at}] đồ vật/biểu tượng hiện ra trên sân khấu | cần: acting trong scene; who = tên trong cast. Nhân vật 3D: cast {"model3d": "<id>"} (xem vf char3d list)
 - **timeline** – Dòng thời gian 2-6 mốc, chấm sáng chạy qua từng mốc. | props: title: tiêu đề; events: [{year, label}] 2-6 mốc, label ≤5 từ; at: [mốc] lúc tới từng mốc (tuỳ chọn)
 - **title_card_neon** – Thẻ tiêu đề mở đầu/chương: chữ lớn bật vào, vạch sáng quét, phát sáng nhẹ. | props: heading: tiêu đề chính (≤6 từ, *từ* để tô nổi); subheading: dòng phụ (tuỳ chọn); kicker: nhãn nhỏ phía trên, vd 'CHƯƠNG 1' (tuỳ chọn)
 
@@ -29,6 +29,9 @@
 
 ## Nhân vật (cast.<Tên>.preset)
 classic, faceless, shadow, beanie, cozy, kid, girl, student, teacher, scientist, elder, grandma, boss, chef, gamer, worker, graduate, gentleman, king, soldier
+
+## Nhân vật 3D (cast.<Tên> = {"model3d": id}, chỉ trong stickman_stage; act tự quy về động tác 3D gần nhất)
+(chưa render nhân vật 3D nào – dùng người que)
 
 ## Acting (scene.acting[] cho stickman_stage)
 beat = {at: 'từ trong lời đọc'|'60%'|giây, act, who?, move?, mood?, hold?, say?, face?}

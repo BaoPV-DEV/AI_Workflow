@@ -370,7 +370,7 @@
     }
     return { p, seated: !!act.seated && !s.walk, x: lerp(s.x0, s.x1, k) * W, face: s.face || 1, mood: s.mood, hold: s.hold, say: s.say, sayT: s.sayT, label: s.label,
       talking: !s.walk && (TALK_ACTS.has(s.act) || !!s.say), idle: !s.walk && !act.loop && !act.seated,
-      emote: s.emote, emoteAge: t - (s.emoteT ?? 0) };
+      emote: s.emote, emoteAge: t - (s.emoteT ?? 0), act: s.act, since: t - s.t, walking: !!s.walk };
   }
 
   VF.Stick = Stick;

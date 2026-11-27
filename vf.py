@@ -302,11 +302,36 @@ def cmd_skills_sync(a):
     dst = config.ROOT / ".claude" / "skills" / "video-strategy" / "references"
     for n in ("channel-analysis-framework.md", "seo-and-retention-rules.md", "policy-checklist.md"):
         shutil.copy2(src / n, dst / n)
+    # bộ dựng nhân vật 3D (make_character.py đã chỉnh đường dẫn cho AI Workflow nên giữ nguyên)
+    shutil.copy2(cache / ".claude" / "skills" / "ai-video-production-pipeline" / "scripts" / "hero3d" / "build_character.py",
+                 config.ROOT / "engine" / "hero3d" / "build_character.py")
     rev = subprocess.run(["git", "-C", str(cache), "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
     f = dst / "SOURCE.md"
     import re
     f.write_text(re.sub(r"\(commit \w+\)", f"(commit {rev})", f.read_text(encoding="utf-8")), encoding="utf-8")
     print(f"✔ Đã cập nhật tài liệu từ Skills @ {rev}. Bản rút gọn cho AI (config/prompts/policy.md, publish.md) sửa tay nếu quy tắc đổi nhiều.")
+
+
+def cmd_char3d(a):
+    from engine import char3d
+    if a.action == "setup":
+        char3d.setup()
+    elif a.action == "status":
+        st = char3d.status()
+        print(f"Blender: {st['python'] or '✘ chưa cài (vf char3d setup)'}\nDữ liệu cơ thể: {st['mpfb'] or '✘ chưa tải'}\n"
+              f"Card NVIDIA: {st['gpu'] or 'không → render CPU, ~12 giây/khung ở chất lượng chuẩn'}")
+    elif a.action == "list":
+        for c in char3d.characters():
+            print(f"{c['id']:14s} {c['name']:16s} {'động tác: ' + ', '.join(c['sets']) if c['sets'] else '(chưa render)'}")
+    elif a.action == "new":
+        s = char3d.new(a.id, a.base or "mia", name=a.name)
+        print(f"✔ Tạo library/cast3d/{s['id']}.json từ mẫu '{a.base or 'mia'}'. Sửa file đó (tóc, quần áo, màu…), rồi: vf char3d sheet {s['id']}")
+    elif a.action == "sheet":
+        char3d.sheet(a.id, a.quality or "nhap")
+    elif a.action == "sprites":
+        char3d.sprites(a.id, a.profile, a.light, a.quality or "chuan", a.only or "")
+        from engine import catalog
+        catalog.write()
 
 
 def cmd_studio(a):
@@ -371,6 +396,11 @@ def main(argv=None):
     s = add("schedule", cmd_schedule, "chạy vf auto mỗi ngày"); s.add_argument("--time", default="07:13"); s.add_argument("args", nargs="?", default="--count 2")
     s = add("audit", cmd_audit, "kiểm duyệt chính sách YouTube/TikTok (+ --apply để tự sửa lời)"); s.add_argument("project"); s.add_argument("--apply", action="store_true")
     s = add("skills-sync", cmd_skills_sync, "cập nhật tài liệu từ repo Skills"); s.add_argument("--repo")
+    s = add("char3d", cmd_char3d, "nhân vật 3D Blender: setup | status | list | new | sheet | sprites")
+    s.add_argument("action", choices=["setup", "status", "list", "new", "sheet", "sprites"]); s.add_argument("id", nargs="?")
+    s.add_argument("--base", help="mẫu gốc khi tạo mới (vd mia, rain_hero)"); s.add_argument("--name")
+    s.add_argument("--profile", default="co_ban", choices=["co_ban", "day_du"]); s.add_argument("--light", default="day")
+    s.add_argument("--quality", choices=["nhap", "chuan", "cao"]); s.add_argument("--only", help="vd walk:side:day,talk:front34:day")
     s = add("studio", cmd_studio, "mở Web Studio"); s.add_argument("--port", type=int, default=8765); s.add_argument("--no-open", action="store_true")
     a = p.parse_args(argv)
     try:
